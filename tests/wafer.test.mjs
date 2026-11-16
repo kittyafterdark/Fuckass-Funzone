@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { WobblyWafersGame, pullRisk, pullableLayers, supports, WAFER_START_LAYERS, WAFER_BASE, WAFER_TABLE, layerHeight } from '../src/wafer.js';
+import { WobblyWafersGame, pullRisk, pullableLayers, supports, WAFER_START_LAYERS, WAFER_BASE, WAFER_TABLE, WAFER_W } from '../src/wafer.js';
 import { waferAt, drawWobblyWafers } from '../src/wafer-render.js';
 
 const tower = (n = WAFER_START_LAYERS) => Array.from({ length: n }, () => [true, true, true]);
@@ -72,12 +72,29 @@ test('Wobbly Wafers physics: the tower breaks at the pulled layer, the stump sta
   assert.ok(g.crumbs.every(c => c.vx < 0), 'with only the right edge left, the weight sits over the empty left side, so the top tips left');
   for (let i = 0; i < 80; i++) g.update(.05);
   assert.ok(g.crumbs.every(c => c.rest), 'every wafer comes to rest');
-  const stumpTop = WAFER_BASE - 6 * layerHeight(g.layers.length);
   for (const c of g.crumbs) {
-    const bottom = c.y + c.h / 2, surfaces = [stumpTop, WAFER_BASE, WAFER_TABLE, ...g.crumbs.filter(o => o !== c).map(o => o.y - o.h / 2)];
-    assert.ok(surfaces.some(y => Math.abs(bottom - y) < .01), `a wafer rests on a surface, not in the air (bottom ${bottom.toFixed(2)})`);
-    assert.ok(bottom <= WAFER_TABLE + .01, 'nothing sinks through the table');
+    const bottom = c.y + c.h / 2;
+    assert.ok([WAFER_BASE, WAFER_TABLE].some(y => Math.abs(bottom - y) < .01), `a wafer lies on the saucer or the table, not in the air (bottom ${bottom.toFixed(2)})`);
   }
   const saved = g.snapshot(), back = new WobblyWafersGame({ saved });
   assert.equal(back.breakRow, 5); assert.deepEqual(back.pulledOut, { row: 5, slot: 0 });
+});
+
+test('Wobbly Wafers: fallen wafers lie flat on screen, never stack into columns, and never slide off tilted', () => {
+  let seed = 5; const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let round = 0; round < 60; round++) {
+    const g = new WobblyWafersGame({ random }); g.start();
+    const row = 1 + round % 5; g.layers[row] = [true, false, true]; g.choose(row, round % 2 ? 0 : 2); g.meter = .5; g.pull();
+    const count = g.crumbs.length;
+    for (let i = 0; i < 80; i++) {
+      g.update(.05);
+      for (const c of g.crumbs) if (!c.rest && c.vy === 0) assert.ok(Math.abs(c.spin) <= .45 && c.spinRate === 0, 'a wafer sliding on a surface is no longer tipping');
+    }
+    assert.equal(g.crumbs.length, count, 'no fallen wafer leaves the screen');
+    for (const c of g.crumbs) {
+      assert.ok(c.rest && c.spin === 0, 'every fallen wafer settles flat');
+      assert.ok(c.x - WAFER_W / 2 >= -.01 && c.x + WAFER_W / 2 <= 360.01, 'and stays fully on screen');
+      assert.ok([WAFER_BASE, WAFER_TABLE].some(y => Math.abs(c.y + c.h / 2 - y) < .01), 'on the saucer or the table, never on top of another wafer');
+    }
+  }
 });

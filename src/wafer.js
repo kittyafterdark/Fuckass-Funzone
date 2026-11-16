@@ -126,7 +126,7 @@ export class WobblyWafersGame {
     for (let r = this.breakRow + 1; r < n; r++) this.layers[r].forEach((on, s) => {
       if (!on) return;
       const up = r - this.breakRow;
-      this.crumbs.push({ x: waferCenterX(s) + this.lean() * r / n, y: WAFER_BASE - (r + .5) * lh, h: lh - 2, vx: side * (35 + up * 14) + (s - 1) * 12 + (unit(this.random) - .5) * 50, vy: -20 - up * 3,
+      this.crumbs.push({ x: waferCenterX(s) + this.lean() * r / n, y: WAFER_BASE - (r + .5) * lh, h: lh - 2, vx: side * (30 + up * 6) + (s - 1) * 10 + (unit(this.random) - .5) * 30, vy: -20 - up * 3,
         side, spin: 0, spinRate: side * (.6 + up * .05), flavor: r + s, crossed: r % 2 === 1, rest: false });
     });
     if (who === 2) {
@@ -146,27 +146,25 @@ export class WobblyWafersGame {
     const noise = this.level === 'hard' ? 1 : this.level === 'normal' ? 4 : 8;
     return pool.map(o => ({ ...o, score: o.risk + unit(this.random) * noise })).sort((a, b) => a.score - b.score)[0];
   }
-  /** Falling wafers land on the standing stump, the saucer, the table, or a wafer that already landed, then slide to a stop. */
+  /** Falling wafers land on the saucer or the table and lie there, scattered side by side like spilled cookies.
+   * They never stack on each other, so nothing can balance in the air, build a column, or slide away. */
   settleCrumbs(dt) {
     const n = this.layers.length, stumpTop = WAFER_BASE - (this.breakRow + 1) * layerHeight(n), stumpHalf = 1.5 * WAFER_W + WAFER_GAP;
     for (const c of this.crumbs) {
       if (c.rest) continue;
       // A falling wafer tips a little, never more than a gentle tilt, so nothing flips or spins on screen.
       c.vy += 900 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.spin = Math.max(-.45, Math.min(.45, c.spin + c.spinRate * dt));
-      const onStump = Math.abs(c.x - 180) <= stumpHalf;
-      let floor = onStump ? stumpTop : Math.abs(c.x - 180) <= SAUCER_RX ? WAFER_BASE : WAFER_TABLE, under = null;
-      if (!onStump) for (const r of this.crumbs) if (r !== c && r.rest && Math.abs(r.x - c.x) < WAFER_W * .9 && r.y - r.h / 2 < floor) { floor = r.y - r.h / 2; under = r; }
+      const onStump = Math.abs(c.x - 180) <= stumpHalf, floor = onStump ? stumpTop : Math.abs(c.x - 180) <= SAUCER_RX ? WAFER_BASE : WAFER_TABLE;
       if (c.y + c.h / 2 < floor) continue;
       c.y = floor - c.h / 2;
-      // The top of the stump is the broken, uneven layer, so nothing settles there: pieces slide on toward the fall and drop off its edge.
+      // Anything touching a surface lies flat against it, so a sliding wafer never keeps its falling tilt.
+      c.spinRate = 0; c.spin *= Math.max(0, 1 - dt * 12);
+      // The top of the stump is the broken, uneven layer, so nothing settles there: pieces slide toward the fall and drop off its edge.
       if (onStump) { c.vy = 0; c.vx = c.side * Math.max(Math.abs(c.vx), 90); continue; }
-      // Fallen wafers make a low heap: a piece rests on another only when that one lies on the floor and it lands mostly on top.
-      // Otherwise it tumbles on, away from the tower, and one that tumbles off the table's edge is gone.
-      if (under && (under.level >= 1 || Math.abs(c.x - under.x) > WAFER_W * .35)) { c.vy = 0; c.vx = c.side * Math.max(Math.abs(c.vx), 70); continue; }
       if (c.vy > 300) { c.vy = -c.vy * .2; c.vx *= .6; continue; }
-      // On the ground it settles flat over a few frames instead of snapping.
-      c.vy = 0; c.vx *= .5; c.spinRate = 0; c.spin *= Math.max(0, 1 - dt * 12);
-      if (Math.abs(c.vx) < 10 && Math.abs(c.spin) < .02) { c.vx = 0; c.spin = 0; c.rest = true; c.level = under ? under.level + 1 : 0; }
+      // On the saucer or table it slows to a stop and settles flat, staying on screen.
+      c.vy = 0; c.vx *= Math.max(0, 1 - dt * 10); c.x = Math.max(WAFER_W / 2, Math.min(360 - WAFER_W / 2, c.x));
+      if (Math.abs(c.vx) < 10 && Math.abs(c.spin) < .02) { c.vx = 0; c.spin = 0; c.rest = true; }
     }
     this.crumbs = this.crumbs.filter(c => c.x > -WAFER_W && c.x < 360 + WAFER_W);
   }

@@ -1,0 +1,83 @@
+{
+  "release": "2.7.1",
+  "base": "Fuckass Funzone v2.7.0 (master after the eight-game merge)",
+  "format": "pull request: source, tests, docs and the rebuilt dist",
+  "behavior": "Wobbly Wafers: fallen wafers lie flat on screen and turned layers are drawn as long wafers. Cake Tower: wobble warning is a light tick. Gabu's line no longer covers the play area in the new games.",
+  "modified": [
+    "dist/frontend.js",
+    "docs/TESTING.md",
+    "package.json",
+    "scripts/build.mjs",
+    "spindle.json",
+    "src/frontend.js",
+    "src/reactions.js",
+    "src/style.css",
+    "src/wafer-render.js",
+    "src/wafer.js",
+    "tests/wafer.test.mjs"
+  ],
+  "added": [
+    "docs/CHANGELOG-2.7.1.md",
+    "docs/UPDATE-MANIFEST-2.7.1.json",
+    "docs/backups-pre-2.7.1/docs/TESTING.md",
+    "docs/backups-pre-2.7.1/package.json",
+    "docs/backups-pre-2.7.1/scripts/build.mjs",
+    "docs/backups-pre-2.7.1/spindle.json",
+    "docs/backups-pre-2.7.1/src/frontend.js",
+    "docs/backups-pre-2.7.1/src/reactions.js",
+    "docs/backups-pre-2.7.1/src/style.css",
+    "docs/backups-pre-2.7.1/src/wafer-render.js",
+    "docs/backups-pre-2.7.1/src/wafer.js",
+    "docs/backups-pre-2.7.1/tests/wafer.test.mjs"
+  ],
+  "backup_root": "docs/backups-pre-2.7.1/",
+  "original_modified_sha256": {
+    "dist/frontend.js": "a0c6b73223c7784c45b3458c2860e13253801c6cc476f802d8b110e69c08ed28",
+    "docs/TESTING.md": "cfe9422b9f82e58c4f873b0bec6d2093215e320bf6ac4cd745085c86323e278a",
+    "package.json": "33ec5a8356878814a13d2c4196911caafee3e8320ea2643431eda522035fd07a",
+    "scripts/build.mjs": "f04d2aa047cc923d1618600581c19e7f6136a443af9563e7b23b4aa3ce369d65",
+    "spindle.json": "a4392a89e8f0a00c5cb903e18cc3fb5e32f5c637fd69811690a3a1cf3891af09",
+    "src/frontend.js": "a53c2d5551f4b455bb22e35011946dca5deb760f956e56151787ff1805670ad7",
+    "src/reactions.js": "c8a3b15e23307b64250bb0c187bfd432af0eacfb3a6340614e01d2b53c74e1cb",
+    "src/style.css": "0396424ece9053ad5382b6edb18fa4275ad0c74b76920f5e9c6fb3d799c645d9",
+    "src/wafer-render.js": "c8aede0298dd464084035c420e178ee6781df291a7a8bede9201b5c620479d74",
+    "src/wafer.js": "46027e1926c5f7712181cc6e9623a4991252d9cedda95118b9800f4b12f568e1",
+    "tests/wafer.test.mjs": "4764e66a74a9b34b1247522a8b01c9c37a330e8f9c40fc8b1cf3c1eec53fbf06"
+  },
+  "updated_modified_sha256": {
+    "dist/frontend.js": "898ade25b3c2ebc8de6225a6e0163c4da35048f85d4ee2e6c004e0b9bec59c0e",
+    "docs/TESTING.md": "029ea487fc0c85a8f2e0735e8126adb03feaceeda0963f07097b0d6bd00d9d60",
+    "package.json": "30fa82ca2b027d3f7a742737159db90dab33251ca789b3e0051154ad91e5c608",
+    "scripts/build.mjs": "1e83532401da38e5c0507e8e9391266e240086697706542e5aede7949f0b541a",
+    "spindle.json": "f779e1f029518bcec7d66b9321fcd53e6e2f2b1751d7417ae2b14fffedec8c8b",
+    "src/frontend.js": "3bde8774581e03d118ea677c2944017f32cc9c6a3b09fceedc17957d37d0ff91",
+    "src/reactions.js": "4b67fe0435c0e6c5173aa449ce364fe1c4d6dde3c90840868926ccc94ab6e260",
+    "src/style.css": "cf6914b7488679eae0e0867fc7e1c8a8f881963b750d989f492110533b867433",
+    "src/wafer-render.js": "ef6c1505a2db27c28fc76ef845015860bae6b5eab2d618f9d18c17b9bc7aeb44",
+    "src/wafer.js": "ba27452ea946d2e428e756845fe7f02d1a74f2738644b54f203df5e2f7f130d3",
+    "tests/wafer.test.mjs": "8cff5c2ace11ba5e28dea54ff466fab007e4b34e4a740c1ab2696f2bd4fd7768"
+  },
+  "added_sha256": {
+    "docs/CHANGELOG-2.7.1.md": "81e1221021545f9741a55b5c94ba20ea77b5a2c0dffc6eb13249990e3c0e7111",
+    "docs/backups-pre-2.7.1/docs/TESTING.md": "cfe9422b9f82e58c4f873b0bec6d2093215e320bf6ac4cd745085c86323e278a",
+    "docs/backups-pre-2.7.1/package.json": "33ec5a8356878814a13d2c4196911caafee3e8320ea2643431eda522035fd07a",
+    "docs/backups-pre-2.7.1/scripts/build.mjs": "f04d2aa047cc923d1618600581c19e7f6136a443af9563e7b23b4aa3ce369d65",
+    "docs/backups-pre-2.7.1/spindle.json": "a4392a89e8f0a00c5cb903e18cc3fb5e32f5c637fd69811690a3a1cf3891af09",
+    "docs/backups-pre-2.7.1/src/frontend.js": "a53c2d5551f4b455bb22e35011946dca5deb760f956e56151787ff1805670ad7",
+    "docs/backups-pre-2.7.1/src/reactions.js": "c8a3b15e23307b64250bb0c187bfd432af0eacfb3a6340614e01d2b53c74e1cb",
+    "docs/backups-pre-2.7.1/src/style.css": "0396424ece9053ad5382b6edb18fa4275ad0c74b76920f5e9c6fb3d799c645d9",
+    "docs/backups-pre-2.7.1/src/wafer-render.js": "c8aede0298dd464084035c420e178ee6781df291a7a8bede9201b5c620479d74",
+    "docs/backups-pre-2.7.1/src/wafer.js": "46027e1926c5f7712181cc6e9623a4991252d9cedda95118b9800f4b12f568e1",
+    "docs/backups-pre-2.7.1/tests/wafer.test.mjs": "4764e66a74a9b34b1247522a8b01c9c37a330e8f9c40fc8b1cf3c1eec53fbf06"
+  },
+  "tests": {
+    "command": "node --test tests/*.test.mjs",
+    "passed": 183,
+    "failed": 0
+  },
+  "notes": [
+    "Spindle extension identifier and v1 localStorage key unchanged. No save migration.",
+    "No game rules, scoring, ticket formulas, shop items or Gabu lines changed.",
+    "Kitty's original games keep their existing reaction bubble."
+  ]
+}
