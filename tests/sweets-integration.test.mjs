@@ -193,19 +193,19 @@ test('touches on the phone are claimed so scrolling the launcher never drags the
   });
 });
 
-test('bundled Sprinkle Scurry plays by keys and swipes, and the run survives reload', () => {
+test('bundled Malware Mayhem plays by keys and swipes, and the run survives reload', () => {
   withHost({}, h => {
-    h.pick('scurry'); h.frames(14);
+    h.pick('malware'); h.frames(14);
     h.key('ArrowLeft'); h.frames(6);
-    // Single sprinkles are saved in batches; pausing saves straight away.
-    h.key('KeyP'); const ran = h.save().puzzles.scurry; h.key('KeyP');
-    assert.ok(ran.score > 0, 'arrow keys steer the hamster into the sprinkles'); assert.equal(ran.status, 'paused', 'saves store a running game as paused');
+    // Single bytes are saved in batches; pausing saves straight away.
+    h.key('KeyP'); const ran = h.save().puzzles.malware; h.key('KeyP');
+    assert.ok(ran.score > 0, 'arrow keys steer the virus into the data'); assert.equal(ran.status, 'paused', 'saves store a running game as paused');
     const canvas = h.findClass('bb-canvas');
     canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 300 });
     canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 240 });
-    h.frames(8); h.key('KeyP'); assert.ok(h.save().puzzles.scurry.score > ran.score, 'a swipe up turns the hamster into the next aisle');
-    assert.equal(h.drawerSelect('Sprinkle Scurry pace').value, 'normal');
-    const score = h.save().puzzles.scurry.score; h.reload(); h.pick('scurry');
-    assert.equal(h.save().puzzles.scurry.score, score, 'the run comes back after a reload');
+    h.frames(8); h.key('KeyP'); assert.ok(h.save().puzzles.malware.score > ran.score, 'a swipe up turns the virus into the next corridor');
+    assert.equal(h.drawerSelect('Malware Mayhem pace').value, 'normal');
+    const score = h.save().puzzles.malware.score; h.reload(); h.pick('malware');
+    assert.equal(h.save().puzzles.malware.score, score, 'the run comes back after a reload');
   });
 });

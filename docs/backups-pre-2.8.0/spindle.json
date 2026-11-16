@@ -1,7 +1,7 @@
 {
   "identifier": "fuckass_funzone",
   "name": "Fuckass Funzone · Arcade Intermission",
-  "version": "2.7.1",
+  "version": "2.7.0",
   "author": "KittyLotus",
   "description": "Frontend-only Funzone OS arcade: Bird, Jetpack, Snake, 2048, Match-3, Plinko, Simon, Duck Hunt, fictional-ticket Slots, Tetris, Solitaire, Froggy, Catmate Chess, Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, Wobbly Wafers and Gacha Match. Custom art, saves and generation-aware HUD.",
   "entry_frontend": "dist/frontend.js",

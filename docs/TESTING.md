@@ -81,17 +81,13 @@ Run `npm run check` after source changes. The eight new rule suites cover chess 
 
 As before, the preview and automated mock do not establish a successful live Lumiverse install. Complete these checks in Lumiverse on desktop and a touch device before treating the contribution as release-ready.
 
-## v2.7.1 Wobbly Wafers falls, Cake Tower wobble cue, and Gabu's line placement
+## v2.8.0 Malware Mayhem, settled wafers, the Cake Tower wobble cue, and Gabu's line placement
 
-45. Wobbly Wafers: topple the tower from low, middle and high layers, by pulling a lone edge and by letting the wobble meter fill. Every falling wafer tips a little in the air, then lies flat on the saucer or table and stays on screen; none rest on top of another wafer, slide while tilted, or float. Every other layer is drawn as one long turned wafer, and pulling one of its wafers turns that wafer's dot hollow.
+Run `npm run check` after source changes. `tests/malware.test.mjs` covers the maze (every corridor connects, none dead-ends), eating, early turns and turning back, exploits and doubling crashes, catches and the last heart, level clears, pace effects, pause, saves and tampered saves, swipes and taps, and the renderer. `tests/sweets-integration.test.mjs` plays it in the bundled build with keys and a swipe and reloads it. `tests/wafer.test.mjs` checks that fallen wafers lie flat on screen across 60 random topples.
+
+45. Wobbly Wafers: topple the tower from low, middle and high layers, by pulling a lone edge and by letting the wobble meter fill. Every falling wafer tips a little in the air, drops in front of the stump, and lies flat on the saucer or table, on screen; none rest on the stump or on another wafer, slide while tilted, or hang in the air.
 46. Cake Tower: land a few sloppy tiers until the cake wobbles. The warning is a light tick with Gabu's smug face; the harsh crash buzz plays only when a tier misses and costs a heart.
-47. With Gabu commentary on, trigger lines in each new game at 382 px and 292 px cabinet widths. In Catmate Chess, Bubble Bloom, Boop-a-Bun, Wobbly Wafers and Gacha Match the bubble sits over the title bar; in Berry Drop, Tic Tac Treats and Cake Tower it sits over the footer. It never hides the board, the bubble launcher, the bottom burrows, the steady-hand meter, the capsules or the cake stand.
-
-## v2.8.0 Sprinkle Scurry
-
-`tests/scurry.test.mjs` covers the maze (every aisle connects, none dead-ends), eating, early turns and turning back, sugar rushes and doubling bonks, catches and the last heart, level clears, pace effects, pause, saves and tampered saves, swipes and taps, and the renderer. `tests/sweets-integration.test.mjs` plays it in the bundled build with keys and a swipe and reloads it.
-
-48. Launch Sprinkle Scurry from Funzone OS. Steer with swipes, with taps toward where the hamster should go, and with arrows and WASD. A turn asked for a little early is taken at the next opening, and turning back works between two cells. Swiping on the board never scrolls the page or drags the cabinet.
-49. Eat a sugar cube: the bots go pale with swirly eyes and run, the footer shows a draining bar, and nothing blinks. Bonk two bots in one rush (100, then 200), let the rush end, and get caught: a heart is lost and everyone returns to the start with READY?. Lose the last heart for VACUUMED UP!, then clear a whole shop and confirm the next level starts full and a little faster. Compare Chill and Chaos (two slower bots against four faster ones).
-50. With Gabu commentary on, his line sits over the title bar at 382 px and 292 px and never covers the maze or the footer. Pause, blur, switch games, reload, and re-enable: the run resumes paused at the start positions with its sprinkles, score, hearts and level intact.
-
+47. With Gabu commentary on, trigger lines in each new game at 382 px and 292 px cabinet widths. In Catmate Chess, Bubble Bloom, Boop-a-Bun, Wobbly Wafers, Gacha Match and Malware Mayhem the bubble sits over the title bar; in Berry Drop, Tic Tac Treats and Cake Tower it sits over the footer. It never hides the board, the bubble launcher, the bottom burrows, the steady-hand meter, the capsules, the cake stand or the maze.
+48. Launch Malware Mayhem from Funzone OS. Steer with swipes, with taps toward where the virus should go, and with arrows and WASD. A turn asked for a little early is taken at the next opening, and turning back works between two cells. Swiping on the board never scrolls the page or drags the cabinet.
+49. Eat an exploit chip: the bots go gray with crossed-out eyes and run, the footer shows a draining gold bar, and nothing blinks. Crash two bots in one exploit (100, then 200), let it run out, and get caught: a heart is lost and everyone returns to the start with READY?. Lose the last heart for QUARANTINED, then clear a whole maze and confirm the next level starts full and a little faster. Compare Chill and Chaos (two slower bots against four faster ones).
+50. Pause, blur, switch games, reload, and re-enable during Malware Mayhem: the run resumes paused at the start positions with its bytes, score, hearts and level intact.

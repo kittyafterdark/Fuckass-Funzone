@@ -56,7 +56,7 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   assert.equal(behavior.length,1,'Arcade behavior is independently collapsible');
   const gameTabs=sidebar.filter(x=>x.className==='bb-drawer-game-tab');
   const gamePanels=sidebar.filter(x=>x.className==='bb-drawer-game-page');
-  const modes=['bird','gabi','snake','2048','match3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory','scurry'];
+  const modes=['bird','gabi','snake','2048','match3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory','malware'];
   assert.deepEqual(gameTabs.map(x=>x.dataset.game),modes,'all twenty-one games have compact tabs');
   assert.deepEqual(gamePanels.map(x=>x.dataset.game),modes,'all twenty-one games have independent help panels');
   assert.equal(sidebar.filter(x=>x.attributes.get('role')==='tablist').length,1,'one radio-style tablist');
@@ -79,7 +79,7 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   tablist.dispatch('keydown',{key:'Home',target:tabBy('plinko')});
   assert.equal(selectedTabs()[0].dataset.game,'bird','Home focuses first game');
   tablist.dispatch('keydown',{key:'End',target:tabBy('bird')});
-  assert.equal(selectedTabs()[0].dataset.game,'scurry','End focuses last game');
+  assert.equal(selectedTabs()[0].dataset.game,'malware','End focuses last game');
   clickTab('match3');
   assert.equal(visiblePanels().length,1,'never displays stacked game pages');
   const specials=sidebar.filter(x=>x.className==='bb-special-card');assert.equal(specials.length,3,'explains match-3, rocket and bomb');

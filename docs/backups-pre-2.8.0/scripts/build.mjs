@@ -119,7 +119,7 @@ ui=ui.replace(importAnchor,pureEngine).replace(puzzleAnchor,purePuzzles).replace
   .replace(miniAnchor,pureMini).replace(miniRenderAnchor,pureMiniRender)
   .replace(assetAnchor,'const ASSETS = '+JSON.stringify(assets)+';').replace(cssAnchor,'const CSS = '+JSON.stringify(css)+';')
   .replace(tabSvgAnchor,'const FUNZONE_TAB_SVG = '+JSON.stringify(arcadeSvg)+';');
-const banner=`/* Fuckass Funzone 2.7.1 | self-contained Spindle frontend | ${Object.keys(assets).length} embedded PNG/SVG assets | generated from editable src/ */\n`;
+const banner=`/* Fuckass Funzone 2.7.0 | self-contained Spindle frontend | ${Object.keys(assets).length} embedded PNG/SVG assets | generated from editable src/ */\n`;
 // Artifact is validated in memory before writes.
 const candidate=banner+ui;
 if(/^import\s/m.test(candidate))throw Error('Unresolved runtime import');

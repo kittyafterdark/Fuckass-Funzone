@@ -982,7 +982,7 @@ export class ReactionDirector {
   else if(event==='combo'||event==='big_pop'){mood='hype';priority=3;}
   else if(event==='milestone'){mood='hype';priority=4;duration=3.4;}
   else if(event==='clear'){mood='hype';priority=5;duration=3.8;}
-  else if(event==='wobble'){mood='smug';priority=3;} // A wobbly cake only gets harder to aim at; it never falls, so Gabu mocks instead of panicking.
+  else if(event==='wobble'){mood='panic';priority=4;}
   else if(event==='ceiling'){mood='panic';priority=3;}
   else if(event==='avalanche'){mood='shock';priority=4;}
   else if(event==='gold'){mood='hype';priority=3;}

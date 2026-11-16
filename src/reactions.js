@@ -934,47 +934,47 @@ const SAYINGS=Object.freeze({
    "Done! Your brain cells deserve a capsule of their own."
   ]
  },
- scurry:{
+ malware:{
   new_best:[
-   "A hamster with a high score. My vacuum fleet is being outplayed by a snack with legs.",
-   "That's a new record, and my bots have the dent marks to prove it.",
-   "Best run yet?! Who gave the rodent a strategy guide?!",
-   "Record broken. I'm rewriting the bots' firmware out of pure spite."
+   "New record. My firewall just got outscored by a glorified pop-up ad.",
+   "A virus with a high score. Somebody update my threat level to 'embarrassing'.",
+   "Best infection yet?! Who's been leaking you my patch notes?!",
+   "Record broken. I'm reinstalling my whole OS out of spite."
   ],
-  sugar:[
-   "SUGAR?! Who left a sugar cube in MY shop?!",
-   "Oh no. It has the zoomies. Bots, scatter!",
-   "That hamster just inhaled a sugar cube. My bots are not insured for this.",
-   "Zoomies engaged. My whole fleet suddenly remembered it has somewhere else to be.",
-   "Great. A caffeinated fur ball. Exactly what my telemetry needed today."
+  exploit:[
+   "AN EXPLOIT?! Who left an unpatched chip in MY mainframe?!",
+   "Oh no. My bots just blue-screened. Don't look at them.",
+   "You corrupted my antivirus?! That subscription cost me a kidney!",
+   "Zero-day in my own house. My right eye is reading pure static.",
+   "Great. The malware found admin rights. Love that for me."
   ],
-  bonk:[
-   "BONK?! That's a precision vacuum, not a bumper car!",
-   "You bonked my bot back to the charger. It was nine percent from a firmware update.",
-   "Stop headbutting my hardware, you fuzzy menace.",
-   "Another bot down. Somebody file the warranty claim.",
-   "My poor little bot is spinning on its charger now. Proud of yourself?"
+  crash:[
+   "You CRASHED my bot?! It was nine percent into a firmware update!",
+   "Rebooting. Again. Do you know how long my bots take to boot?",
+   "Stop deleting my security staff, you spiky little pest.",
+   "Another bot down. My IT department is just me, crying.",
+   "My poor bot is stuck on the loading screen now. Proud of yourself?"
   ],
   caught:[
-   "SUCKED UP! Into the bag, sprinkle thief!",
-   "Got you! My bot didn't even need its turbo setting.",
-   "One heart down. The vacuum always wins, rodent.",
-   "Caught red-pawed with a mouth full of sprinkles. Embarrassing.",
-   "Whoosh! You turned straight into it. My right eye saw that coming from the charger."
+   "QUARANTINED! Into the recycle bin, pest!",
+   "Got you! My bot didn't even need its full scan.",
+   "One heart down. Antivirus always wins, germ.",
+   "Caught with a mouth full of my data. Disgusting.",
+   "Threat contained! My right eye flagged you three corridors ago."
   ],
   win:[
-   "THE WHOLE SHOP?! You ate every single sprinkle?! I just restocked!",
-   "Shelves empty. Bots humiliated. I'm sending in faster ones.",
-   "Level cleared?! My cleaning fleet had ONE job and you did it for them!",
-   "No sprinkles left. My accountant is going to scream.",
-   "You cleaned me out! Fine! Next level, the bots get espresso!"
+   "YOU ATE MY ENTIRE DATABASE?! I didn't have a backup!",
+   "Mainframe wiped. Bots humiliated. I'm installing faster ones.",
+   "All my data, GONE?! My antivirus had ONE job!",
+   "Every byte, eaten. My hard drive is crying in binary.",
+   "You cleaned me out! Fine! Next level, the bots get overclocked!"
   ],
   death:[
-   "VACUUMED UP! Out of hearts and into the dust bag!",
-   "Game over, fluffball! My bots are doing a victory lap around your crumbs!",
-   "That's the last heart! Somebody sweep up this hamster-shaped mess!",
-   "The fleet wins! Every sprinkle you missed is going straight into MY snack drawer!",
-   "DONE! You scurried right into the business end of a vacuum. Iconic."
+   "DELETED! Out of hearts and straight into the trash!",
+   "Game over, germ! My antivirus is doing a victory lap!",
+   "That's the last heart! Clean install, baby, you're GONE!",
+   "The firewall wins! Every byte you missed stays MINE!",
+   "DONE! You infected the wrong cyborg. Iconic."
   ]
  }
 });
@@ -1009,10 +1009,10 @@ export class ReactionDirector {
   if(game==='boop'&&event==='boop'&&count%8!==0)return null;
   if(game==='wafer'&&event==='pull'&&count%3!==1)return null;
   if(game==='cake'&&event==='land'&&count%3!==1)return null;
-  if(game==='scurry'&&event==='bonk'&&count%2!==1)return null;
+  if(game==='malware'&&event==='crash'&&count%2!==1)return null;
   // Where Gabu is the opponent, the result is Gabu's own: a player win is Gabu losing (panic), a player loss is Gabu winning (hype).
-  // Sprinkle Scurry counts too: Gabu's vacuum bots are the ones chasing you.
-  const rival=game==='chess'||game==='berry'||game==='tictac'||game==='wafer'||game==='scurry';
+  // Malware Mayhem counts too: Gabu's antivirus bots are the ones hunting you.
+  const rival=game==='chess'||game==='berry'||game==='tictac'||game==='wafer'||game==='malware';
   if(rival&&event==='win'){mood='panic';priority=5;duration=3.8;}
   else if(rival&&event==='death'){mood='hype';priority=5;duration=3.8;}
   else if(event==='draw'){mood='dizzy';priority=4;duration=3.4;}
@@ -1041,8 +1041,8 @@ export class ReactionDirector {
   else if(event==='streak'){mood='hype';priority=3;}
   else if(event==='miss'&&game==='memory'){mood='annoyed';priority=1;}
   else if(event==='land'&&game==='cake'){mood='annoyed';priority=1;}
-  else if(event==='sugar'){mood='shock';priority=3;}
-  else if(event==='bonk'){mood='annoyed';priority=3;}
+  else if(event==='exploit'){mood='shock';priority=3;}
+  else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   else if(event==='special_created'){mood='hype';priority=3;}
   else if(event==='no_moves'){mood='shock';priority=6;duration=4.2;}

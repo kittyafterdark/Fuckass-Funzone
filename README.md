@@ -40,11 +40,11 @@ Open **Funzone OS** from the arcade drawer to launch any of the twenty-one games
 | **Boop-a-Bun** | Boop bunnies as they pop out of their burrows. Golden ones pay extra; skip Gabu's robot decoys. |
 | **Wobbly Wafers** | Take turns with Gabu pulling wafers from the tower. Tap a wafer, then tap again while the meter is green. Don't topple it. |
 | **Gacha Match** | Memorize the open capsules, then open two at a time to find every pair of matching charms. Choose a cozy, classic, or busy tray. |
-| **Sprinkle Scurry** | Guide a hamster through a candy-shop maze and eat every sprinkle while Gabu's vacuum bots give chase. Swipe, tap, or use the arrows. A sugar cube makes the bots dizzy so you can bonk them back to their charger. |
+| **Malware Mayhem** | Play a little virus loose in Gabu's mainframe: eat every byte of his data while his antivirus bots hunt you. Swipe, tap, or use the arrows. An exploit chip corrupts the bots so you can crash them back to their reboot dock. |
 
 Tetris, Solitaire, Froggy, and the nine newest games pause with **P** or the cabinet's main button. They also pause when the window loses focus; saved games resume paused. Solitaire supports keyboard play: arrows choose cards/piles, Enter selects, D draws, F moves the selected top card to its foundation, Z/U undoes, and Escape cancels selection. Undo history lasts for the current session; the board itself survives reloads.
 
-Catmate Chess, Berry Drop, Tic Tac Treats, and Wobbly Wafers are played against Gabu, with a Chill, Normal, or Hard opponent in each game's drawer settings. Cake Tower, Bubble Bloom, Boop-a-Bun, and Sprinkle Scurry have Chill, Normal, and Chaos paces, and Gacha Match has three tray sizes. A new difficulty, pace, or board size applies to your next new game, never to the one in progress. Chess undo also lasts for the current session only.
+Catmate Chess, Berry Drop, Tic Tac Treats, and Wobbly Wafers are played against Gabu, with a Chill, Normal, or Hard opponent in each game's drawer settings. Cake Tower, Bubble Bloom, Boop-a-Bun, and Malware Mayhem have Chill, Normal, and Chaos paces, and Gacha Match has three tray sizes. A new difficulty, pace, or board size applies to your next new game, never to the one in progress. Chess undo also lasts for the current session only.
 
 ### Visit the Prize Counter
 

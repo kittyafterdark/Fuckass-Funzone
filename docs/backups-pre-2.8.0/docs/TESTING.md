@@ -80,9 +80,3 @@ Run `npm run check` after source changes. The eight new rule suites cover chess 
 44. For each new game, pause, blur the window, switch games, reload, and re-enable the extension. Each board resumes paused with its score intact, Bubble Bloom keeps a shot that was in flight in the launcher, and Boop-a-Bun resumes with its clock and an empty garden. Typing arrows, digits, or Space in the chat input must not control the arcade.
 
 As before, the preview and automated mock do not establish a successful live Lumiverse install. Complete these checks in Lumiverse on desktop and a touch device before treating the contribution as release-ready.
-
-## v2.7.1 Wobbly Wafers falls, Cake Tower wobble cue, and Gabu's line placement
-
-45. Wobbly Wafers: topple the tower from low, middle and high layers, by pulling a lone edge and by letting the wobble meter fill. Every falling wafer tips a little in the air, then lies flat on the saucer or table and stays on screen; none rest on top of another wafer, slide while tilted, or float. Every other layer is drawn as one long turned wafer, and pulling one of its wafers turns that wafer's dot hollow.
-46. Cake Tower: land a few sloppy tiers until the cake wobbles. The warning is a light tick with Gabu's smug face; the harsh crash buzz plays only when a tier misses and costs a heart.
-47. With Gabu commentary on, trigger lines in each new game at 382 px and 292 px cabinet widths. In Catmate Chess, Bubble Bloom, Boop-a-Bun, Wobbly Wafers and Gacha Match the bubble sits over the title bar; in Berry Drop, Tic Tac Treats and Cake Tower it sits over the footer. It never hides the board, the bubble launcher, the bottom burrows, the steady-hand meter, the capsules or the cake stand.
