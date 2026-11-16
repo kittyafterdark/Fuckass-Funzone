@@ -56,9 +56,9 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   assert.equal(behavior.length,1,'Arcade behavior is independently collapsible');
   const gameTabs=sidebar.filter(x=>x.className==='bb-drawer-game-tab');
   const gamePanels=sidebar.filter(x=>x.className==='bb-drawer-game-page');
-  const modes=['bird','gabi','snake','2048','match3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory'];
-  assert.deepEqual(gameTabs.map(x=>x.dataset.game),modes,'all twenty games have compact tabs');
-  assert.deepEqual(gamePanels.map(x=>x.dataset.game),modes,'all twenty games have independent help panels');
+  const modes=['bird','gabi','snake','2048','match3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory','scurry'];
+  assert.deepEqual(gameTabs.map(x=>x.dataset.game),modes,'all twenty-one games have compact tabs');
+  assert.deepEqual(gamePanels.map(x=>x.dataset.game),modes,'all twenty-one games have independent help panels');
   assert.equal(sidebar.filter(x=>x.attributes.get('role')==='tablist').length,1,'one radio-style tablist');
   assert.equal(sidebar.filter(x=>x.className==='bb-drawer-details').length,0,'accordion skyscraper removed');
   const selectedTabs=()=>gameTabs.filter(x=>x.attributes.get('aria-selected')==='true');
@@ -79,7 +79,7 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   tablist.dispatch('keydown',{key:'Home',target:tabBy('plinko')});
   assert.equal(selectedTabs()[0].dataset.game,'bird','Home focuses first game');
   tablist.dispatch('keydown',{key:'End',target:tabBy('bird')});
-  assert.equal(selectedTabs()[0].dataset.game,'memory','End focuses last game');
+  assert.equal(selectedTabs()[0].dataset.game,'scurry','End focuses last game');
   clickTab('match3');
   assert.equal(visiblePanels().length,1,'never displays stacked game pages');
   const specials=sidebar.filter(x=>x.className==='bb-special-card');assert.equal(specials.length,3,'explains match-3, rocket and bomb');
@@ -173,9 +173,9 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   canvas.dispatch('pointerup',{pointerId:1});
   ws.get('GENERATION_ENDED')({generationId:'G1'});
   assert.equal(placements.widget.visible,true,'a finished answer never interrupts an active run');
-  // The single phone picker opens twenty game apps without a permanent tab rail.
+  // The single phone picker opens twenty-one game apps without a permanent tab rail.
   const apps=flatten(placements.widget.root).filter(x=>x.className==='bb-app');
-  assert.equal(apps.length,20,'Funzone OS exposes twenty custom-asset apps');
+  assert.equal(apps.length,21,'Funzone OS exposes twenty-one custom-asset apps');
   assert.equal(flatten(placements.widget.root).filter(x=>x.className==='bb-mode').length,0);
   const pick=mode=>{const picker=flatten(placements.widget.root).find(x=>x.className.includes('bb-phone-button'));assert.ok(picker);picker.dispatch('click');
     const target=apps.find(x=>x.title===`Open ${mode}`);assert.ok(target,mode);target.dispatch('click');};

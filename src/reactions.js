@@ -933,6 +933,49 @@ const SAYINGS=Object.freeze({
    "Full tray! Somebody put this in a museum!",
    "Done! Your brain cells deserve a capsule of their own."
   ]
+ },
+ scurry:{
+  new_best:[
+   "A hamster with a high score. My vacuum fleet is being outplayed by a snack with legs.",
+   "That's a new record, and my bots have the dent marks to prove it.",
+   "Best run yet?! Who gave the rodent a strategy guide?!",
+   "Record broken. I'm rewriting the bots' firmware out of pure spite."
+  ],
+  sugar:[
+   "SUGAR?! Who left a sugar cube in MY shop?!",
+   "Oh no. It has the zoomies. Bots, scatter!",
+   "That hamster just inhaled a sugar cube. My bots are not insured for this.",
+   "Zoomies engaged. My whole fleet suddenly remembered it has somewhere else to be.",
+   "Great. A caffeinated fur ball. Exactly what my telemetry needed today."
+  ],
+  bonk:[
+   "BONK?! That's a precision vacuum, not a bumper car!",
+   "You bonked my bot back to the charger. It was nine percent from a firmware update.",
+   "Stop headbutting my hardware, you fuzzy menace.",
+   "Another bot down. Somebody file the warranty claim.",
+   "My poor little bot is spinning on its charger now. Proud of yourself?"
+  ],
+  caught:[
+   "SUCKED UP! Into the bag, sprinkle thief!",
+   "Got you! My bot didn't even need its turbo setting.",
+   "One heart down. The vacuum always wins, rodent.",
+   "Caught red-pawed with a mouth full of sprinkles. Embarrassing.",
+   "Whoosh! You turned straight into it. My right eye saw that coming from the charger."
+  ],
+  win:[
+   "THE WHOLE SHOP?! You ate every single sprinkle?! I just restocked!",
+   "Shelves empty. Bots humiliated. I'm sending in faster ones.",
+   "Level cleared?! My cleaning fleet had ONE job and you did it for them!",
+   "No sprinkles left. My accountant is going to scream.",
+   "You cleaned me out! Fine! Next level, the bots get espresso!"
+  ],
+  death:[
+   "VACUUMED UP! Out of hearts and into the dust bag!",
+   "Game over, fluffball! My bots are doing a victory lap around your crumbs!",
+   "That's the last heart! Somebody sweep up this hamster-shaped mess!",
+   "The fleet wins! Every sprinkle you missed is going straight into MY snack drawer!",
+   "DONE! You scurried right into the business end of a vacuum. Iconic."
+  ]
  }
 });
 const MOODS=Object.freeze({idle:'gabu_smug',smug:'gabu_smug',annoyed:'gabu_annoyed',hype:'gabu_hype',panic:'gabu_panic',dizzy:'gabu_dizzy',sleepy:'gabu_sleepy',shock:'gabu_shock',magnate:'gabu_magnate'});
@@ -966,8 +1009,10 @@ export class ReactionDirector {
   if(game==='boop'&&event==='boop'&&count%8!==0)return null;
   if(game==='wafer'&&event==='pull'&&count%3!==1)return null;
   if(game==='cake'&&event==='land'&&count%3!==1)return null;
+  if(game==='scurry'&&event==='bonk'&&count%2!==1)return null;
   // Where Gabu is the opponent, the result is Gabu's own: a player win is Gabu losing (panic), a player loss is Gabu winning (hype).
-  const rival=game==='chess'||game==='berry'||game==='tictac'||game==='wafer';
+  // Sprinkle Scurry counts too: Gabu's vacuum bots are the ones chasing you.
+  const rival=game==='chess'||game==='berry'||game==='tictac'||game==='wafer'||game==='scurry';
   if(rival&&event==='win'){mood='panic';priority=5;duration=3.8;}
   else if(rival&&event==='death'){mood='hype';priority=5;duration=3.8;}
   else if(event==='draw'){mood='dizzy';priority=4;duration=3.4;}
@@ -996,6 +1041,9 @@ export class ReactionDirector {
   else if(event==='streak'){mood='hype';priority=3;}
   else if(event==='miss'&&game==='memory'){mood='annoyed';priority=1;}
   else if(event==='land'&&game==='cake'){mood='annoyed';priority=1;}
+  else if(event==='sugar'){mood='shock';priority=3;}
+  else if(event==='bonk'){mood='annoyed';priority=3;}
+  else if(event==='caught'){mood='hype';priority=4;}
   else if(event==='special_created'){mood='hype';priority=3;}
   else if(event==='no_moves'){mood='shock';priority=6;duration=4.2;}
   else if(event==='cascade'||event==='win'||event==='new_best'){mood='hype';priority=5;duration=3.8;}

@@ -192,3 +192,20 @@ test('touches on the phone are claimed so scrolling the launcher never drags the
     assert.equal(press('mouse'), false, 'a mouse can still drag the widget from anywhere, as before');
   });
 });
+
+test('bundled Sprinkle Scurry plays by keys and swipes, and the run survives reload', () => {
+  withHost({}, h => {
+    h.pick('scurry'); h.frames(14);
+    h.key('ArrowLeft'); h.frames(6);
+    // Single sprinkles are saved in batches; pausing saves straight away.
+    h.key('KeyP'); const ran = h.save().puzzles.scurry; h.key('KeyP');
+    assert.ok(ran.score > 0, 'arrow keys steer the hamster into the sprinkles'); assert.equal(ran.status, 'paused', 'saves store a running game as paused');
+    const canvas = h.findClass('bb-canvas');
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 300 });
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 240 });
+    h.frames(8); h.key('KeyP'); assert.ok(h.save().puzzles.scurry.score > ran.score, 'a swipe up turns the hamster into the next aisle');
+    assert.equal(h.drawerSelect('Sprinkle Scurry pace').value, 'normal');
+    const score = h.save().puzzles.scurry.score; h.reload(); h.pick('scurry');
+    assert.equal(h.save().puzzles.scurry.score, score, 'the run comes back after a reload');
+  });
+});
