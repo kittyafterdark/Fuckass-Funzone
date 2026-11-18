@@ -88,6 +88,7 @@ function svgIcon(name,size=16) {
   return svg;
 }
 function setIconLabel(el,iconName,label) {
+  if(el.getAttribute('aria-label')===label)return;
   el.replaceChildren(svgIcon(iconName),create('span','',label));
   el.setAttribute('aria-label',label);
 }
@@ -113,7 +114,8 @@ function button(className, label, action, title = label) {
 }
 function image(name, className = '') {
   const img = create('img', className);
-  img.src = ASSETS[name] || '';
+  img.loading = 'lazy';
+  if (ASSETS[name]) img.src = ASSETS[name];
   img.alt = '';
   img.draggable = false;
   return img;
@@ -121,9 +123,6 @@ function image(name, className = '') {
 function safeLoad(key, fallback) {
   try { const raw = localStorage.getItem(key); return raw === null ? fallback : JSON.parse(raw); }
   catch { return fallback; }
-}
-function safeSave(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode / quota */ }
 }
 function writeStyle(target) {
   const style = create('style'); style.textContent = CSS; target.appendChild(style);
@@ -155,27 +154,18 @@ function makeSound(settings) {
   };
 }
 
-function loadImages() {
-  const names = [
-    ...Array.from({ length: 6 }, (_, i) => `bird_flap_${i}`),
-    ...Array.from({ length: 6 }, (_, i) => `gabi_fly_${i}`),
-    'bird_dizzy','bird_dead','gabi_hurt','gabi_crash','gabi_dead','cloud','coin','star','heart',
-    'flame_0','flame_1','flame_2','record_flag','best_banner','game_over_banner',
-    'snake_head','snake_snack',...['apple','berry','star','fish','cookie','candy'].map(k=>`snake_food_${k}`),'merge_tile',
-    ...['cat','heart','star','fish','cookie','gem','rocket','bomb'].map(k=>`match_${k}`),
-    ...['cat','heart','star','fish','cookie','gem','rocket','bomb','hint'].map(k=>`match_vec_${k}`),
-    ...['smug','annoyed','hype','panic','dizzy','sleepy','shock'].map(k=>`gabu_${k}`),
-    'gabu_magnate','gabu_peek','plinko_chip','plinko_app','plinko_crest','simon_app','duck_app','slots_app','tetris_app','solitaire_app','froggy_app',
-    'chess_app','berry_app','treats_app','cake_app','bubble_app','boop_app','wafer_app','memory_app',
-    'gambit_app',
-  ];
-  const imgs = {};
-  for (const name of names) {
-    if (!ASSETS[name] || typeof Image === 'undefined') continue;
-    try { const img = new Image(); img.src = ASSETS[name]; imgs[name] = img; }
-    catch { /* render falls back to drawn mascots */ }
-  }
-  return imgs;
+function lazyCanvasImages(onLoad) {
+  return new Proxy(Object.create(null), {
+    get(cache, name) {
+      if (Object.hasOwn(cache,name)) return cache[name];
+      if (!ASSETS[name] || typeof Image === 'undefined') return undefined;
+      const img=new Image();
+      img.addEventListener('load',onLoad,{once:true});
+      cache[name]=img;
+      img.src=ASSETS[name];
+      return img;
+    },
+  });
 }
 
 function drawPill(ctx, x, y, w, h, color) {
@@ -427,8 +417,9 @@ export function setup(ctx) {
   for(const id of GAME_IDS)bests[id]=Math.max(0,Math.floor(Number(persisted?.bests?.[id])||0));
   let tickets=Number.isSafeInteger(persisted.tickets)?Math.max(0,Math.min(100000000,persisted.tickets)):0;
   let shopState=restoreShop(persisted.shop);
-  const images=loadImages();let lifecycle={activeIds:[],ready:false};
+  const images=lazyCanvasImages(requestDraw);let lifecycle={activeIds:[],ready:false};
   let widget=null,drawer=null,action=null,frame=0,lastTs=0,shown=false,disposed=false;
+  let drawPending=true,refreshPending=false,blurred=false;
   let keyHeld=false,pointerStart=null,selectedCell=-1,keyboardCursor=-1,solitaireCursor=-1,chessCursor=-1,bubbleAiming=false,toyKeys=false;
   const classicGames={},pendingClassicScores=new Set();let classicSavePending=false;
   let gambit=null,gambitDirty=false,gambitCursor=-1,gambitInspection=null,gambitAnnounce=null;
@@ -458,16 +449,25 @@ export function setup(ctx) {
   let reactionBox=null,reactionPicture=null,reactionText=null;
   const reactions=new ReactionDirector();
   const off=[],listeners=[],sound=makeSound(settings);
-  const save=()=>{
-    matchBanks[match3.width]=match3.snapshot();
-    safeSave(storageKey,{settings,bests,arcadeGame:activeMode,tickets,shop:shopState,plinkoStake,slotStake,matchHintSeconds,matchTimerSeconds,duckTimerSeconds,duckSpeed,gabuLevels,toyPaces,match3Width:match3.width,match3Boards:matchBanks,
-      puzzles:{...persisted.puzzles,snake:snake.snapshot(),merge:merge.snapshot(),match3:match3.snapshot(),plinko:plinko.snapshot(),simon:simon.snapshot(),duck:duck.snapshot(),slots:slots.snapshot(),
-        ...Object.fromEntries(Object.entries(classicGames).map(([id,g])=>[id,g.snapshot()])),...(gambit?{gambit:gambit.snapshot()}:{})}});
-  };
+  let saveTimer=null,lastSaved=null;
+  // Batch bursts of gameplay events before taking any snapshots or serializing boards.
+  function save(){
+    if(saveTimer===null&&!disposed)saveTimer=setTimeout(saveNow,250);
+  }
+  function saveNow(){
+    if(saveTimer!==null){clearTimeout(saveTimer);saveTimer=null;}
+    const matchSnapshot=match3.snapshot();
+    matchBanks[match3.width]=matchSnapshot;
+    const value=JSON.stringify({settings,bests,arcadeGame:activeMode,tickets,shop:shopState,plinkoStake,slotStake,matchHintSeconds,matchTimerSeconds,duckTimerSeconds,duckSpeed,gabuLevels,toyPaces,match3Width:match3.width,match3Boards:matchBanks,
+      puzzles:{...persisted.puzzles,snake:snake.snapshot(),merge:merge.snapshot(),match3:matchSnapshot,plinko:plinko.snapshot(),simon:simon.snapshot(),duck:duck.snapshot(),slots:slots.snapshot(),
+        ...Object.fromEntries(Object.entries(classicGames).map(([id,g])=>[id,g.snapshot()])),gambit:gambit.snapshot()}});
+    if(value===lastSaved)return;
+    try {localStorage.setItem(storageKey,value);lastSaved=value;} catch { /* private mode / quota */ }
+  }
   function addTickets(amount){
     const gain=Math.max(0,Math.floor(Number(amount)||0));
     tickets=creditTickets(tickets,gain);
-    save();refresh();
+    save();
   }
   function award(id,score){
     const current=Math.max(0,Math.floor(Number(score)||0));
@@ -484,17 +484,17 @@ export function setup(ctx) {
     if(event==='score'||event==='death')award(game.mode,game.score);
     // Collected Jetpack coins are real wallet credits, never a death-screen estimate.
     if(event==='coin'&&game.mode==='gabi')addTickets(1);
-    reactions.emit(game.mode,event);refresh();
+    reactions.emit(game.mode,event);refreshPending=true;
   }});
   const snake=new SnakeGame({saved:persisted?.puzzles?.snake,onEvent:(event)=>{
     if(event==='score'||event==='death')award('snake',snake.score);
     if(event==='death')sound.play('death');else if(event==='score')sound.play('coin');
-    reactions.emit('snake',event);refresh();
+    reactions.emit('snake',event);refreshPending=true;
   }});
   const merge=new Merge2048({saved:persisted?.puzzles?.merge,onEvent:(event,data)=>{
     if(event==='score'||event==='death'||event==='move'||event==='undo')award('2048',merge.score);
     if(event==='score')sound.play('score');
-    reactions.emit('2048',event,data);refresh();
+    reactions.emit('2048',event,data);refreshPending=true;
   }});
   const onMatchEvent=(event,data)=>{
     if(event==='score'||event==='move')award('match3',match3.score);
@@ -502,37 +502,37 @@ export function setup(ctx) {
     if(event==='special_triggered')addTickets(Math.min(20,2*Math.max(0,Number(data?.count)||0)));
     if(event==='match'||event==='special_created'||event==='special_triggered'||event==='cascade')sound.play(event==='special_triggered'?'coin':'score');
     if(event==='no_moves'||event==='timeout')sound.play('death');
-    if(event==='timeout')save(); // A clock can expire without a pointer/keyboard event; persist the failure immediately.
-    reactions.emit('match3',event,data);refresh();
+    if(event==='timeout')saveNow(); // A clock can expire without a pointer/keyboard event; persist the failure immediately.
+    reactions.emit('match3',event,data);refreshPending=true;
   };
   let match3=new Match3Game({width:firstMatchWidth,timerSeconds:matchTimerSeconds,saved:matchBanks[firstMatchWidth],onEvent:onMatchEvent});
   const plinko=new PlinkoGame({saved:persisted?.puzzles?.plinko,onEvent:(event,data)=>{
-    if(event==='land'){tickets=Math.min(100000000,tickets+data.payout);bests.plinko=Math.max(bests.plinko,data.payout);sound.play(data.multiplier>=6?'score':'coin');save();}
-    reactions.emit('plinko',event,data);refresh();
+    if(event==='land'){tickets=Math.min(100000000,tickets+data.payout);bests.plinko=Math.max(bests.plinko,data.payout);sound.play(data.multiplier>=6?'score':'coin');saveNow();}
+    reactions.emit('plinko',event,data);refreshPending=true;
   }});
   const simon=new SimonGame({saved:persisted?.puzzles?.simon,onEvent:(event,data)=>{
     if(event==='score')award('simon',simon.score);
     if(event==='tap'||event==='score')sound.play('coin');
     if(event==='death')sound.play('death');
-    reactions.emit('simon',event,data);refresh();
+    reactions.emit('simon',event,data);refreshPending=true;
   }});
   const duck=new DuckGame({timerSeconds:duckTimerSeconds,speed:duckSpeed,saved:persisted?.puzzles?.duck,onEvent:(event,data)=>{
     if(event==='score')award('duck',duck.score);
     if(event==='score')sound.play('coin');
-    if(event==='death'){sound.play('death');save();} // The clock may end a hunt without any further player input.
-    reactions.emit('duck',event,data);refresh();
+    if(event==='death'){sound.play('death');saveNow();} // The clock may end a hunt without any further player input.
+    reactions.emit('duck',event,data);refreshPending=true;
   }});
   const slots=new SlotGame({saved:persisted?.puzzles?.slots,onEvent:(event,data)=>{
-    if(event==='land'){addTickets(data.payout);bests.slots=Math.max(bests.slots,data.payout);sound.play(data.multiplier>=9?'score':'coin');save();}
+    if(event==='land'){addTickets(data.payout);bests.slots=Math.max(bests.slots,data.payout);sound.play(data.multiplier>=9?'score':'coin');saveNow();}
     if(event==='spin')sound.play('start');
     if(event==='land'){reactions.emit('slots',data.stake===0?'practice':data.multiplier>=14?'jackpot':'land',data);}
-    else reactions.emit('slots',event,data);refresh();
+    else reactions.emit('slots',event,data);refreshPending=true;
   }});
   gambit=new GambitGame({saved:persisted?.puzzles?.gambit,onEvent:event=>{
     if(!gambit)return;gambitDirty=true;
     if(event==='score')sound.play('score');else if(event==='death')sound.play('death');else if(event==='purchase'||event==='upgrade')sound.play('coin');
   }});
-  function flushGambit(){if(!gambitDirty)return;gambitDirty=false;award('gambit',gambit.score);save();refresh();}
+  function flushGambit(){if(!gambitDirty)return;gambitDirty=false;award('gambit',gambit.score);saveNow();}
   // Cues for the newer games reuse the same synth, so the Sound setting silences them like every other game.
   const CLASSIC_SOUNDS=Object.freeze({
     chess:{move:'tick',gabu_move:'tick',capture:'coin',queen_taken:'coin',gabu_capture:'hit',queen_lost:'hit',check:'start',gabu_check:'hit',castle:'flap',promote:'score',draw:'hit',undo:'flap'},
@@ -556,7 +556,7 @@ export function setup(ctx) {
     if(['score','move','undo','win','death','hit','home','level','hop','lock','hold','gabu_move','draw','drop','gabu_drop','place','gabu_place','round','land','miss','shoot','swap','ceiling','clear','boop','gold','bot','whiff','escape','pull','gabu_pull','flip','match','streak','forgot'].includes(event))classicSavePending=true;
     if(event==='death')sound.play('death');else if(event==='win'||event==='line')sound.play('score');
     else if(CLASSIC_SOUNDS[id]?.[event])sound.play(CLASSIC_SOUNDS[id][event]);
-    reactions.emit(id,event,data);refresh();
+    reactions.emit(id,event,data);refreshPending=true;
   }
   function flushClassic(){
     if(!classicSavePending)return;
@@ -576,7 +576,7 @@ export function setup(ctx) {
     matchBanks[match3.width]=match3.snapshot();match3.pause();
     match3=new Match3Game({width,timerSeconds:matchTimerSeconds,saved:matchBanks[width],onEvent:onMatchEvent});
     selectedCell=-1;keyboardCursor=-1;reactions.clear();
-    save();refresh();refreshReaction();
+    saveNow();refresh();refreshReaction();
   }
   function shopAction(id){
     const item=SHOP_CATALOG.find(reward=>reward.id===id);
@@ -593,23 +593,26 @@ export function setup(ctx) {
       if(shopNotice)shopNotice.textContent=`Unlocked ${item.name}. Permanently yours.`;
       sound.play('score');
     }
-    save();refresh();
+    saveNow();refresh();
   }
   function resetShopSlot(slot){
     const result=equipReward(shopState,slot,'default');if(!result.ok)return;
     shopState=result.shop;if(shopNotice)shopNotice.textContent='Original look equipped.';
-    save();refresh();
+    saveNow();refresh();
   }
   function chooseShopCategory(category){
     if(category!=='all'&&!SHOP_SLOTS.includes(category))return;
     shopCategory=category;if(shopScroll)shopScroll.scrollTop=0;refresh();
   }
+  let shopView=null;
   function refreshShop(){
-    if(!shopEl)return;
+    if(!shopEl||!shopOpen)return;
+    if(shopView?.tickets===tickets&&shopView.state===shopState&&shopView.category===shopCategory)return;
+    shopView={tickets,state:shopState,category:shopCategory};
     if(shopWallet)shopWallet.textContent=String(tickets);
     for(const [category,btn] of shopFilters){btn.setAttribute('aria-pressed',String(category===shopCategory));}
-    for(const [id,entry] of shopCards){
-      const item=SHOP_CATALOG.find(reward=>reward.id===id);
+    for(const [item,entry] of shopCards){
+      const id=item.id;
       entry.node.hidden=shopCategory!=='all'&&shopCategory!==item.slot;
       const owned=shopState.owned.includes(id),equipped=shopState.equipped[item.slot]===id;
       entry.node.dataset.owned=owned?'true':'false';entry.node.dataset.equipped=equipped?'true':'false';
@@ -629,27 +632,36 @@ export function setup(ctx) {
     phoneOpen=true;shopOpen=true;if(shopScroll)shopScroll.scrollTop=0;refresh();save();
   }
   function closeShop(){shopOpen=false;refresh();}
+  let lastView=[];
   function refresh(){
+    refreshPending=false;
+    requestDraw();
     if(!statusEl)return;
-    statusEl.textContent=lifecycle.activeIds.length?'THINKING':lifecycle.ready?'READY':'IDLE';
-    statusEl.setAttribute('aria-label',lifecycle.activeIds.length?'Model is thinking':lifecycle.ready?'Response ready':'Arcade idle');
-    statusEl.dataset.state=lifecycle.activeIds.length?'thinking':lifecycle.ready?'ready':'idle';
-    const current=active();
-    if(canvas)canvas.dataset.mode=activeMode;
-    if(gameStage)gameStage.dataset.game=activeMode;
-    if(footerEl)footerEl.textContent=activeMode==='gambit'?'1–9 / 0 SELECT · SPACE PLAY · D DISCARD':activeMode==='chess'?'PICK, THEN MOVE':activeMode==='berry'?'TAP A COLUMN':activeMode==='tictac'?'TAP A SQUARE':activeMode==='cake'?'TAP TO DROP':activeMode==='bubble'?'DRAG TO AIM':activeMode==='boop'?'BOOP THE BUNS':activeMode==='wafer'?'PULL A WAFER':activeMode==='memory'?'FIND THE PAIRS':activeMode==='tetris'?'ARROWS / TOUCH · SPACE TO DROP':activeMode==='solitaire'?'TAP SOURCE, THEN DESTINATION':activeMode==='froggy'?'ARROWS / WASD / TOUCH PAD':activeMode==='plinko'?(tickets?'FICTIONAL TICKETS ONLY':'FREE PRACTICE'):activeMode==='simon'?'TAP COLORS / KEYS 1–4':activeMode==='duck'?'TAP THE DUCKS':activeMode==='slots'?'FICTIONAL TICKETS ONLY':activeMode==='snake'?'ARROWS / SWIPE':activeMode==='2048'?'SWIPE / ARROWS':activeMode==='match3'?'TAP / DRAG TO SWAP':game.mode==='gabi'?'HOLD TO THRUST':'TAP TO FLAP';
     if(gambitAnnounce){gambitAnnounce.hidden=activeMode!=='gambit';if(activeMode==='gambit'){
       const preview=gambit.preview(),focused=gambitActions(gambit,{inspection:gambitInspection})[gambitCursor];
       const packChoice=gambit.pack&&Number.isInteger(gambit.pack.selected)?gambitActions(gambit).find(action=>action.kind==='packOption'&&action.index===gambit.pack.selected):null;
       const inspectionText=typeof gambitInspection==='string'?GAMBIT_JOKERS.find(item=>item.id===gambitInspection)?.description:gambitInspection?.offer!==undefined?gambitActions(gambit).find(action=>action.kind==='offer'&&action.index===gambitInspection.offer)?.label:gambitInspection?.deck?`${gambit.deck.length} cards remain in the deck.`:gambitInspection?.info?'Run information and poker hand guide. Joker Collection is available here.':gambitInspection?.joker?GAMBIT_JOKERS.find(item=>item.id===gambitInspection.joker)?.description:gambitInspection?.cardHelp?'Card effects. Glass doubles Mult per scoring trigger but may break permanently. Steel boosts held cards. Enhancements and seals are explained on screen.':gambitInspection?.collection?`Joker collection. ${gambitInspection.filter||'all'} rarities, page ${(gambitInspection.page||0)+1}.`:gambitInspection?.breakdown?`Full scoring breakdown, page ${(gambitInspection.page||0)+1}.`:null;
-      gambitAnnounce.textContent=`Ante ${gambit.ante}, ${gambit.blindName}. Blind ${gambit.round} of ${gambit.campaignLength}.${gambit.boss?` ${gambit.boss.name}: ${gambit.boss.description}`:''} ${gambit.status}, ${gambit.phase}. ${gambit.roundScore} of ${gambit.target} points. ${gambit.playsLeft} plays and ${gambit.discardsLeft} discards left. ${gambit.money} run coins. ${gambit.selected.length} cards selected.${preview?` ${preview.name}, ${preview.total} points.`:''}${gambit.lastResult?` ${gambit.lastResult.name} scored ${gambit.lastResult.total}. ${gambit.lastResult.steps.map(step=>step.label).join('. ')}.`:''}${packChoice?` Selected pack choice: ${packChoice.label}.`:''}${inspectionText?` ${inspectionText}`:''}${focused?` Focus: ${focused.label}.`:''}`;
+      const announcement=`Ante ${gambit.ante}, ${gambit.blindName}. Blind ${gambit.round} of ${gambit.campaignLength}.${gambit.boss?` ${gambit.boss.name}: ${gambit.boss.description}`:''} ${gambit.status}, ${gambit.phase}. ${gambit.roundScore} of ${gambit.target} points. ${gambit.playsLeft} plays and ${gambit.discardsLeft} discards left. ${gambit.money} run coins. ${gambit.selected.length} cards selected.${preview?` ${preview.name}, ${preview.total} points.`:''}${gambit.lastResult?` ${gambit.lastResult.name} scored ${gambit.lastResult.total}. ${gambit.lastResult.steps.map(step=>step.label).join('. ')}.`:''}${packChoice?` Selected pack choice: ${packChoice.label}.`:''}${inspectionText?` ${inspectionText}`:''}${focused?` Focus: ${focused.label}.`:''}`;
+      if(gambitAnnounce.textContent!==announcement)gambitAnnounce.textContent=announcement;
     }}
+    const current=active();
+    const view=[activeMode,current.status,Boolean(slots.pending),lifecycle.activeIds.length>0,lifecycle.ready,
+      tickets,shopState,shopCategory,shopOpen,phoneOpen,settings.sound,settings.difficulty,
+      match3.width,matchHintSeconds,plinkoStake,slotStake,...Object.values(gabuLevels),...Object.values(toyPaces),...GAME_IDS.map(id=>bests[id])];
+    if(view.every((value,index)=>value===lastView[index]))return;
+    lastView=view;
+    statusEl.textContent=lifecycle.activeIds.length?'THINKING':lifecycle.ready?'READY':'IDLE';
+    statusEl.setAttribute('aria-label',lifecycle.activeIds.length?'Model is thinking':lifecycle.ready?'Response ready':'Arcade idle');
+    statusEl.dataset.state=lifecycle.activeIds.length?'thinking':lifecycle.ready?'ready':'idle';
+    if(canvas)canvas.dataset.mode=activeMode;
+    if(gameStage)gameStage.dataset.game=activeMode;
+    if(footerEl)footerEl.textContent=activeMode==='gambit'?'1–9 / 0 SELECT · SPACE PLAY · D DISCARD':activeMode==='chess'?'PICK, THEN MOVE':activeMode==='berry'?'TAP A COLUMN':activeMode==='tictac'?'TAP A SQUARE':activeMode==='cake'?'TAP TO DROP':activeMode==='bubble'?'DRAG TO AIM':activeMode==='boop'?'BOOP THE BUNS':activeMode==='wafer'?'PULL A WAFER':activeMode==='memory'?'FIND THE PAIRS':activeMode==='tetris'?'ARROWS / TOUCH · SPACE TO DROP':activeMode==='solitaire'?'TAP SOURCE, THEN DESTINATION':activeMode==='froggy'?'ARROWS / WASD / TOUCH PAD':activeMode==='plinko'?(tickets?'FICTIONAL TICKETS ONLY':'FREE PRACTICE'):activeMode==='simon'?'TAP COLORS / KEYS 1–4':activeMode==='duck'?'TAP THE DUCKS':activeMode==='slots'?'FICTIONAL TICKETS ONLY':activeMode==='snake'?'ARROWS / SWIPE':activeMode==='2048'?'SWIPE / ARROWS':activeMode==='match3'?'TAP / DRAG TO SWAP':game.mode==='gabi'?'HOLD TO THRUST':'TAP TO FLAP';
     if(playButton){const isSlot=activeMode==='slots';const playing=current.status==='playing';
       const label=isSlot?(slots.pending?(playing?'Pause':'Resume'):'Spin'):playing?'Pause':current.status==='paused'?'Resume':activeMode==='plinko'?'Drop':current.status==='dead'&&activeMode==='match3'?'New Board':current.status==='dead'?'Again':'Play';
-      setIconLabel(playButton,label==='Pause'?'pause':'play',label);playButton.disabled=false;}
+      setIconLabel(playButton,label==='Pause'?'pause':'play',label);}
     
     if(soundButton)setIconLabel(soundButton,settings.sound?'volume':'mute',settings.sound?'Sound on':'Sound off');
-    if(ticketEl)ticketEl.textContent=String(tickets);
+    if(ticketEl&&ticketEl.textContent!==String(tickets))ticketEl.textContent=String(tickets);
     if(rootEl){rootEl.dataset.cabinet=shopState.equipped.cabinet;rootEl.dataset.shopOpen=String(shopOpen);rootEl.dataset.phoneOpen=String(phoneOpen&&!shopOpen);}
     if(undoButton)undoButton.hidden=activeMode!=='2048'&&activeMode!=='solitaire'&&activeMode!=='chess';
     for(const [id,select] of presetSelects)select.value=gabuLevels[id]||toyPaces[id];
@@ -672,26 +684,43 @@ export function setup(ctx) {
     for(const [amount,b] of wagerButtons){b.classList.toggle('selected',amount===chosenStake);b.disabled=amount!==0&&tickets<amount;}
     const chosenSlotStake=tickets===0||slotStake===0?0:tickets>=slotStake?slotStake:0;
     for(const [amount,b] of slotButtons){b.classList.toggle('selected',amount===chosenSlotStake);b.disabled=amount!==0&&tickets<amount;}
-    for(const [mode,el] of appBestLabels)el.textContent=`BEST ${bests[mode]}`;
+    for(const [mode,el] of appBestLabels){const label=`BEST ${bests[mode]}`;if(el.textContent!==label)el.textContent=label;}
     if(phoneResume)phoneResume.textContent=`CONTINUE ${GAME_ROSTER.find(([id])=>id===activeMode)?.[1]||'GAME'}`;
-    for(const [id,el] of drawerBestLabels)el.textContent=String(bests[id]);
+    for(const [id,el] of drawerBestLabels){const label=String(bests[id]);if(el.textContent!==label)el.textContent=label;}
   }
   function refreshReaction(){
     if(!reactionBox)return;
     const item=reactions.current;
-    if(!settings.gabuReactions||!item||!shown||item.game!==activeMode){reactionBox.hidden=true;return;}
-    reactionBox.hidden=false;
+    if(!settings.gabuReactions||!item||!shown||item.game!==activeMode){if(!reactionBox.hidden)reactionBox.hidden=true;return;}
+    if(reactionBox.hidden)reactionBox.hidden=false;
     if(reactionText.textContent!==item.line)reactionText.textContent=item.line;
     if(reactionPicture.dataset.art!==item.art){reactionPicture.src=ASSETS[item.art]||'';reactionPicture.dataset.art=item.art;}
-    reactionBox.dataset.mood=item.mood;
+    if(reactionBox.dataset.mood!==item.mood)reactionBox.dataset.mood=item.mood;
   }
-  function tick(now){
-    frame=0;if(!shown||disposed)return;
-    const dt=lastTs?Math.max(0,Math.min(.12,(now-lastTs)/1000)):0;lastTs=now;
-    reactions.update(dt);refreshReaction();
-    if(activeMode==='gambit'){gambit.update(dt);flushGambit();drawGambit(canvas,gambit,{best:bests.gambit,reduced:settings.reduceMotion,cursor:gambitCursor,inspection:gambitInspection});}
+  function animatingGame(){
+    if(phoneOpen)return false;
+    if(activeMode==='match3')return match3.status==='playing'||match3.flash>0;
+    if(activeMode==='plinko')return plinko.status==='playing'||plinko.flash>0;
+    if(activeMode==='slots')return slots.status==='playing'&&Boolean(slots.pending);
+    if(activeMode==='simon')return simon.status==='playing'&&simon.phase!=='input';
+    if(activeMode==='gambit')return gambit.status==='playing'&&gambit.phase==='score'&&gambit.scoreTime<1.2;
+    const current=classicGames[activeMode];
+    if(current){
+      // These effects also update after a game pauses or ends.
+      if(activeMode==='chess'&&current.flash>0)return true;
+      if(activeMode==='cake'&&current.crumbs.length>0)return true;
+      if(activeMode==='wafer'&&(current.crumbs.some(crumb=>!crumb.rest)||current.lastPull?.age<.4))return true;
+      if((activeMode==='boop'||activeMode==='bubble')&&current.effects.length>0)return true;
+      if(activeMode==='tictac'&&current.placed.some(time=>time>0&&time<1))return true;
+      if(activeMode==='memory'&&current.cards.some(card=>card.turn!==(card.up||card.matched||current.preview>0?1:0)))return true;
+      return activeMode!=='solitaire'&&current.status==='playing';
+    }
+    return activeMode!=='2048'&&active().status==='playing';
+  }
+  function drawGame(now){
+    if(activeMode==='gambit'){drawGambit(canvas,gambit,{best:bests.gambit,reduced:settings.reduceMotion,cursor:gambitCursor,inspection:gambitInspection});}
     else if(classicGames[activeMode]){
-      const current=classicGames[activeMode];current.update(dt);flushClassic();
+      const current=classicGames[activeMode];
       const opts={best:bests[activeMode],reduced:settings.reduceMotion,cursor:solitaireCursor<0?null:classicGames.solitaire.keyboardHits()[solitaireCursor]};
       const toyOpts={best:bests[activeMode],reduced:settings.reduceMotion,images,time:now/1000,cursor:toyKeys};
       if(activeMode==='tetris')drawTetris(canvas,current,opts);
@@ -706,20 +735,41 @@ export function setup(ctx) {
       else if(activeMode==='memory')drawGachaMatch(canvas,current,toyOpts);
       else drawFroggy(canvas,current,opts);
     }
-    else if(activeMode==='snake'){snake.update(dt);drawSnake(canvas,snake,images,{ready:lifecycle.ready,best:bests.snake,skin:shopState.equipped.snake});}
+    else if(activeMode==='snake')drawSnake(canvas,snake,images,{ready:lifecycle.ready,best:bests.snake,skin:shopState.equipped.snake});
     else if(activeMode==='2048')drawMerge(canvas,merge,{ready:lifecycle.ready,best:bests['2048'],skin:shopState.equipped.merge});
-    else if(activeMode==='match3'){match3.update(dt);drawMatch3(canvas,match3,images,{ready:lifecycle.ready,best:bests.match3,selected:selectedCell>=0?selectedCell:keyboardCursor,reduceMotion:settings.reduceMotion,hint:match3.getHint(matchHintSeconds)});}
-    else if(activeMode==='plinko'){plinko.update(dt);drawPlinko(canvas,plinko,images,{tickets,stake:plinkoStake,reduced:settings.reduceMotion,trailSkin:shopState.equipped.plinko});}
-    else if(activeMode==='simon'){simon.update(dt);drawSimon(canvas,simon,{best:bests.simon});}
-    else if(activeMode==='duck'){duck.update(dt);drawDuck(canvas,duck,{best:bests.duck,reduced:settings.reduceMotion});}
-    else if(activeMode==='slots'){slots.update(dt);drawSlots(canvas,slots,{tickets,stake:tickets>=slotStake?slotStake:0,best:bests.slots});}
-    else{game.update(dt);drawFrame(canvas,game,images,settings,lifecycle,bests[game.mode]);}
-    frame=requestAnimationFrame(tick);
+    else if(activeMode==='match3')drawMatch3(canvas,match3,images,{ready:lifecycle.ready,best:bests.match3,selected:selectedCell>=0?selectedCell:keyboardCursor,reduceMotion:settings.reduceMotion,hint:match3.getHint(matchHintSeconds)});
+    else if(activeMode==='plinko')drawPlinko(canvas,plinko,images,{tickets,stake:plinkoStake,reduced:settings.reduceMotion,trailSkin:shopState.equipped.plinko});
+    else if(activeMode==='simon')drawSimon(canvas,simon,{best:bests.simon});
+    else if(activeMode==='duck')drawDuck(canvas,duck,{best:bests.duck,reduced:settings.reduceMotion});
+    else if(activeMode==='slots')drawSlots(canvas,slots,{tickets,stake:tickets>=slotStake?slotStake:0,best:bests.slots});
+    else drawFrame(canvas,game,images,settings,lifecycle,bests[game.mode]);
   }
-  function startRaf(){if(frame||!shown||disposed)return;lastTs=0;frame=requestAnimationFrame(tick);}
+  function tick(now){
+    const animating=!blurred&&animatingGame();
+    const dt=lastTs?Math.max(0,Math.min(.12,(now-lastTs)/1000)):0;
+    lastTs=now;
+    if(!blurred&&reactions.current)reactions.update(dt);
+    if(animating)active().update(dt);
+    flushClassic();
+    if(refreshPending)refresh();
+    refreshReaction();
+    if(!phoneOpen&&(drawPending||animating)){
+      drawPending=false;
+      drawGame(now);
+    }
+    frame=0;
+    if((!phoneOpen&&drawPending)||(!blurred&&(animatingGame()||reactions.current)))requestFrame();
+    else lastTs=0;
+  }
+  function requestFrame(){if(!frame&&shown&&!disposed&&!document.hidden)frame=requestAnimationFrame(tick);}
+  function requestDraw(){
+    if(disposed)return;
+    drawPending=true;
+    if(!phoneOpen||reactions.current)requestFrame();
+  }
   function stopRaf(){if(frame)cancelAnimationFrame(frame);frame=0;lastTs=0;}
-  function show(){if(disposed||!widget)return;shown=true;widget.setVisible(true);refresh();startRaf();}
-  function hide(){if(!shown)return;shown=false;active().pause();if(activeMode==='bird'||activeMode==='gabi')game.release();stopRaf();save();widget?.setVisible(false);refresh();}
+  function show(){if(disposed||!widget)return;shown=true;widget.setVisible(true);refresh();}
+  function hide(){if(!shown)return;shown=false;active().pause();if(activeMode==='bird'||activeMode==='gabi')game.release();stopRaf();saveNow();widget?.setVisible(false);refresh();refreshReaction();}
   function switchMode(mode,launch=false){
     if(!GAME_IDS.includes(mode))return;
     if(activeMode!==mode)active().pause();
@@ -728,7 +778,7 @@ export function setup(ctx) {
       // Do not reset an existing bird/Gabi run just because the player opens another tab.
       if(game.mode!==mode){settings.mode=mode;game.reset(mode,settings.difficulty,bests[mode]);}
     }
-    phoneOpen=false;shopOpen=false;if(launch){show();if(mode==='duck'&&duck.status==='dead')duck.reset(duckTimerSeconds,duckSpeed);if(presetFresh(classicGames[mode]))resetRun(classicGames[mode]);if(mode!=='plinko'&&mode!=='slots'&&!(mode==='match3'&&match3.status==='dead')&&!(mode==='gambit'&&['idle','dead'].includes(gambit.status)))active().start();canvas?.focus?.({preventScroll:true});}save();refresh();refreshReaction();
+    phoneOpen=false;shopOpen=false;if(launch){show();if(mode==='duck'&&duck.status==='dead')duck.reset(duckTimerSeconds,duckSpeed);if(presetFresh(classicGames[mode]))resetRun(classicGames[mode]);if(mode!=='plinko'&&mode!=='slots'&&!(mode==='match3'&&match3.status==='dead')&&!(mode==='gambit'&&['idle','dead'].includes(gambit.status)))active().start();canvas?.focus?.({preventScroll:true});}saveNow();refresh();refreshReaction();
   }
   function openMode(mode){switchMode(mode,true);}
   function openPhone(){active().pause();if(activeMode==='bird'||activeMode==='gabi'){game.release();keyHeld=false;}phoneOpen=true;shopOpen=false;refresh();save();}
@@ -737,18 +787,19 @@ export function setup(ctx) {
     if(plinko.status==='paused'){plinko.start();refresh();save();return;}
     if(plinko.ball)return;
     const stake=tickets===0||plinkoStake===0?0:tickets>=plinkoStake?plinkoStake:1;
-    if(plinko.launch(x,stake)){tickets-=stake;refresh();save();}
+    if(plinko.launch(x,stake)){tickets-=stake;refresh();saveNow();}
   }
   function doSlotSpin(){
     if(slots.pending){if(slots.status==='paused')slots.start();else slots.pause();save();refresh();return;}
     const stake=slotStake!==0&&tickets>=slotStake?slotStake:0;
-    if(slots.spin(stake)){tickets-=stake;save();refresh();}
+    if(slots.spin(stake)){tickets-=stake;saveNow();refresh();}
   }
   function play(){const g=active();if(activeMode==='slots'){doSlotSpin();}
     else if(activeMode==='plinko'){if(g.status==='playing')g.togglePause();else doPlinkoDrop();}
     else if(g.status==='playing'){g.togglePause();if(activeMode==='bird'||activeMode==='gabi'){game.release();keyHeld=false;}}
     else{if(g.status==='dead'||presetFresh(g))resetRun(g);g.start();}
-    refresh();canvas?.focus?.({preventScroll:true});save();}
+    if(activeMode==='gambit')flushGambit();else save();
+    refresh();canvas?.focus?.({preventScroll:true});}
   // A finished or never-started preset game picks up the current difficulty or pace before it begins.
   function presetFresh(g){return !!g&&(g.status==='dead'||g.status==='idle')&&!!(gabuLevels[activeMode]||toyPaces[activeMode]);}
   function resetRun(g=active()){
@@ -762,7 +813,7 @@ export function setup(ctx) {
   }
   function restart(){const g=active();if(activeMode==='plinko'){tickets=Math.min(100000000,tickets+plinko.cancel());}
     else if(activeMode==='slots'){tickets=Math.min(100000000,tickets+slots.cancel());}
-    else resetRun(g);selectedCell=-1;keyboardCursor=-1;reactions.clear();save();refresh();refreshReaction();}
+    else resetRun(g);selectedCell=-1;keyboardCursor=-1;reactions.clear();saveNow();refresh();refreshReaction();}
   function pointerCell(e){
     const rect=canvas?.getBoundingClientRect?.();
     if(!rect?.width||!rect?.height)return -1;
@@ -814,7 +865,7 @@ export function setup(ctx) {
     else if(action.kind==='replace')gambit.replaceJoker(action.index);
     else if(action.kind==='skip')gambit.skipPack();
     else if(action.kind==='sell'){gambit.sellJoker(action.index);gambitInspection=null;}
-    gambitCursor=-1;flushGambit();save();refresh();
+    gambitCursor=-1;flushGambit();refresh();
   }
   function gambitKey(e){
     const recognized=/^(?:Digit|Numpad)[0-9]$/.test(e.code)||['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter','Space','KeyD','KeyP','KeyR','KeyS','KeyI','Escape'].includes(e.code);
@@ -834,11 +885,11 @@ export function setup(ctx) {
     if(gambit.status!=='playing'){if(e.code==='Enter'||e.code==='Space')play();return;}
     if(gambitInspection)return;
     if(e.code==='KeyI'){gambitInspection={info:true};refresh();return;}
-    if(e.code==='KeyR'||e.code==='KeyS'){gambit.sortHand(e.code==='KeyR'?'rank':'suit');gambitCursor=-1;flushGambit();save();refresh();return;}
+    if(e.code==='KeyR'||e.code==='KeyS'){gambit.sortHand(e.code==='KeyR'?'rank':'suit');gambitCursor=-1;flushGambit();refresh();return;}
     if(/^(?:Digit|Numpad)[0-9]$/.test(e.code)&&gambit.phase==='play')gambit.toggleCard(gambit.hand[(Number(e.code.slice(-1))+9)%10]);
     else if(e.code==='Space'){if(gambit.phase==='score')gambit.continueScore();else if(gambit.phase==='play')gambit.playHand();}
     else if(e.code==='KeyD')gambit.discardSelected();
-    gambitCursor=-1;flushGambit();save();refresh();
+    gambitCursor=-1;flushGambit();refresh();
   }
   function classicPointer(e){
     const current=classicGames[activeMode];
@@ -964,7 +1015,7 @@ export function setup(ctx) {
       if(action)gambitAction(action);else if(gambit.status==='paused')play();return;
     }
     if(classicGames[activeMode]){classicPointer(e);return;}
-    if(activeMode==='plinko'){const rect=canvas.getBoundingClientRect();plinkoAim=Math.max(26,Math.min(334,((e.clientX??rect.left+rect.width/2)-rect.left)*360/rect.width));doPlinkoDrop(plinkoAim);return;}
+    if(activeMode==='plinko'){const rect=canvas.getBoundingClientRect();plinkoAim=Math.max(26,Math.min(334,((e.clientX??rect.left+rect.width/2)-rect.left)*360/rect.width));doPlinkoDrop(plinkoAim);requestDraw();return;}
     if(activeMode==='slots'){doSlotSpin();return;}
     if(activeMode==='simon'||activeMode==='duck'){
       const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
@@ -1039,9 +1090,9 @@ export function setup(ctx) {
       if(dirs[e.code]){e.preventDefault();e.stopPropagation();match3.touch();
         if(keyboardCursor<0)keyboardCursor=Math.floor(MATCH_ROWS/2)*w+Math.floor(w/2);
         else{const dest=keyboardCursor+dirs[e.code];if(dest>=0&&dest<match3.board.length&&(Math.abs(dirs[e.code])!==1||Math.floor(dest/w)===Math.floor(keyboardCursor/w)))keyboardCursor=dest;}
-        return;
+        requestDraw();return;
       }
-      if(e.code==='Space'||e.code==='Enter'){e.preventDefault();e.stopPropagation();if(keyboardCursor<0)keyboardCursor=Math.floor(MATCH_ROWS/2)*w+Math.floor(w/2);selectMatchCell(keyboardCursor);return;}
+      if(e.code==='Space'||e.code==='Enter'){e.preventDefault();e.stopPropagation();if(keyboardCursor<0)keyboardCursor=Math.floor(MATCH_ROWS/2)*w+Math.floor(w/2);selectMatchCell(keyboardCursor);refresh();return;}
       return;
     }
     if(activeMode==='snake'||activeMode==='2048'){
@@ -1059,7 +1110,7 @@ export function setup(ctx) {
     if(activeMode==='gambit')return;
     if(classicGames[activeMode])return;
     if(activeMode==='snake'||activeMode==='2048'||activeMode==='match3'||activeMode==='plinko'||activeMode==='simon'||activeMode==='duck'||activeMode==='slots'||(e.code!=='Space'&&e.code!=='ArrowUp')||e.target!==canvas)return;
-    e.preventDefault();e.stopPropagation();keyHeld=false;game.release();
+    e.preventDefault();e.stopPropagation();keyHeld=false;game.release();requestDraw();
   }
   try{
     widget=ctx.ui.createFloatWidget({width:382,height:605,chromeless:true,resizable:true,snapToEdge:true,
@@ -1125,7 +1176,7 @@ export function setup(ctx) {
       const info=create('div','bb-prize-actions');const meta=create('span','bb-prize-meta','');
       const buy=button('bb-prize-buy','',()=>shopAction(item.id),`Buy ${item.name}`);
       info.append(meta,buy);card.append(info);prizeGrid.append(card);
-      shopCards.set(item.id,{node:card,button:buy,meta});
+      shopCards.set(item,{node:card,button:buy,meta});
     }
     // The catalog alone scrolls; the wallet, categories and navigation remain visible.
     shopScroll=create('div','bb-shop-scroll');shopScroll.setAttribute('role','region');shopScroll.setAttribute('aria-label','Prize catalog');shopScroll.tabIndex=0;
@@ -1142,15 +1193,15 @@ export function setup(ctx) {
     plinkoHost.append(image('gabu_peek','bb-plinko-host-art'));
     gameStage.append(plinkoHost);
     reactionBox=create('div','bb-reaction');reactionBox.hidden=true;reactionBox.setAttribute('role','status');reactionBox.setAttribute('aria-live','polite');
-    reactionPicture=image('gabu_smug','bb-reaction-face');reactionText=create('span','bb-reaction-text','');
+    reactionPicture=image(null,'bb-reaction-face');reactionText=create('span','bb-reaction-text','');
     reactionBox.append(reactionPicture,reactionText);gameStage.append(reactionBox);root.append(gameStage);
     betBar=create('div','bb-plinko-bets');betBar.hidden=true;betBar.setAttribute('aria-label','Plinko fictional ticket wager');
     const stakeLabel=create('span','bb-stake-label','BET');betBar.append(stakeLabel);
-    for(const [value,text] of [[0,'FREE'],[1,'1'],[5,'5'],[10,'10']]){const b=button('bb-stake',text,()=>{plinkoStake=value;save();refresh();},value===0?'Free practice':'Bet '+value);
+    for(const [value,text] of [[0,'FREE'],[1,'1'],[5,'5'],[10,'10']]){const b=button('bb-stake',text,()=>{plinkoStake=value;saveNow();refresh();},value===0?'Free practice':'Bet '+value);
       b.dataset.value=String(value);b.setAttribute('aria-label',value===0?'Practice for free':`Bet ${value} fictional tickets`);wagerButtons.set(value,b);betBar.append(b);}
     slotBar=create('div','bb-slot-bets');slotBar.hidden=true;slotBar.setAttribute('aria-label','Slots fictional ticket stake');
     slotBar.append(create('span','bb-stake-label','SPIN'));
-    for(const [value,text] of [[0,'FREE'],[1,'1'],[3,'3'],[5,'5']]){const b=button('bb-stake',text,()=>{slotStake=value;save();refresh();},value===0?'Free practice':'Spend '+value+' fictional tickets');
+    for(const [value,text] of [[0,'FREE'],[1,'1'],[3,'3'],[5,'5']]){const b=button('bb-stake',text,()=>{slotStake=value;saveNow();refresh();},value===0?'Free practice':'Spend '+value+' fictional tickets');
       b.dataset.slotStake=String(value);slotButtons.set(value,b);slotBar.append(b);}
     bar=create('div','bb-controls');
     bar.append(betBar,slotBar);
@@ -1160,14 +1211,20 @@ export function setup(ctx) {
     footerEl=create('div','bb-footer');bar.append(footerEl);
     playButton=button('bb-mainbutton','',play,'Play game');setIconLabel(playButton,'play','PLAY');
     const resetButton=button('bb-mini','',restart,'Restart game');setIconLabel(resetButton,'restart','Restart');
-    soundButton=button('bb-mini','',()=>{settings.sound=!settings.sound;save();refresh();},'Toggle sound');setIconLabel(soundButton,'mute','Sound off');
+    soundButton=button('bb-mini','',()=>{settings.sound=!settings.sound;saveNow();refresh();},'Toggle sound');setIconLabel(soundButton,'mute','Sound off');
     undoButton=button('bb-mini bb-undo','',()=>{if(activeMode==='2048'||activeMode==='solitaire'||activeMode==='chess'){active().undo();solitaireCursor=-1;flushClassic();save();refresh();}},'Undo move');setIconLabel(undoButton,'undo','Undo');
     bar.append(playButton,resetButton,soundButton,undoButton);root.append(bar);
     widget.root.append(root);
     bind(canvas,'pointerdown',pointerDown);bind(canvas,'pointerup',pointerUp);bind(canvas,'pointercancel',pointerUp);bind(canvas,'pointermove',pointerMove);
     bind(root,'keydown',onKeyDown);bind(root,'keyup',onKeyUp);
-    bind(window,'blur',()=>{keyHeld=false;game.release();active().pause();save();refresh();});
-    bind(document,'visibilitychange',()=>{if(document.hidden){keyHeld=false;game.release();active().pause();save();refresh();}});
+    const pauseForExit=()=>{
+      stopRaf();keyHeld=false;game.release();active().pause();saveNow();refresh();
+    };
+    bind(window,'blur',()=>{blurred=true;pauseForExit();});
+    bind(window,'focus',()=>{blurred=false;requestDraw();});
+    bind(window,'resize',requestDraw);
+    bind(window,'pagehide',saveNow);
+    bind(document,'visibilitychange',()=>{if(document.hidden)pauseForExit();else requestDraw();});
     bind(canvas,'contextmenu',e=>e.preventDefault());
     drawer=ctx.ui.registerDrawerTab({id:'fuckass_funzone',title:'Fuckass Funzone',shortName:'Funzone',iconSvg:FUNZONE_TAB_SVG,description:'The arcade inside your model wait time',
       keywords:['arcade','bird','gabi','gabu','jetpack','snake','2048','match3','match-3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','catmate','connect four','berry','tic tac toe','treats','cake','tower','bubble','bubble shooter','boop','bunny','whack a mole','wafer','jenga','memory','match','gacha','capsules','gambit','poker','jokers','phone','funzone','waiting','thinking']});
@@ -1232,7 +1289,7 @@ export function setup(ctx) {
     function makeToggle(destination,label,key,help){
       const line=create('label','bb-setting'),info=create('span','bb-setting-label');
       info.append(create('strong','',label),create('small','',help));const input=create('input');input.type='checkbox';input.checked=!!settings[key];
-      bind(input,'change',()=>{settings[key]=input.checked;save();refresh();});line.append(info,input);destination.append(line);
+      bind(input,'change',()=>{settings[key]=input.checked;saveNow();refresh();});line.append(info,input);destination.append(line);
       return input;
     }
     function makeSelect(destination,label,help,options,current,accessible,handle){
@@ -1253,7 +1310,7 @@ export function setup(ctx) {
       const flightSelect=makeSelect(dest,'Flight difficulty','Shared by Bird and Jetpack. Changes apply to your next run.',flightOptions,settings.difficulty,'Flight difficulty',v=>{
         settings.difficulty=v;for(const other of flightDrawerSelects)other.value=v;
         if(game.status!=='playing'&&game.status!=='paused')game.reset(game.mode,v,bests[game.mode]);
-        save();refresh();
+        saveNow();refresh();
       });flightDrawerSelects.push(flightSelect);
     }
     const birdInfo=drawerGamePanel('bird');
@@ -1267,11 +1324,11 @@ export function setup(ctx) {
     const matchInfo=drawerGamePanel('match3');
     matchDrawerSelect=makeSelect(matchInfo,'Board difficulty','Each width keeps a separate saved board.',[[6,'Cozy · 6×7'],[7,'Classic · 7×7'],[8,'Busy · 8×7']],match3.width,'Match-3 difficulty',v=>setMatchWidth(Number(v)));
     matchTimerSelect=makeSelect(matchInfo,'Timer mode','Zen is untimed. Timed challenges end at zero. Changes apply on your next new board.',[[0,'Zen · untimed'],[60,'Sprint · 1 min'],[120,'Arcade · 2 min'],[180,'Relaxed · 3 min']],matchTimerSeconds,'Match-3 timer mode',v=>{
-      matchTimerSeconds=Number(v);save();refresh();
+      matchTimerSeconds=Number(v);saveNow();refresh();
     });
     matchHintSelect=makeSelect(matchInfo,'Pity hint delay','After no moves or taps for a while, highlight one legal swap. Pauses during game pause.',
       [[0,'Off'],[8,'8 seconds'],[12,'12 seconds'],[20,'20 seconds']],matchHintSeconds,'Match-3 hint delay',v=>{
-        matchHintSeconds=Number(v);match3.touch();save();refresh();
+        matchHintSeconds=Number(v);match3.touch();saveNow();refresh();
       });
     matchInfo.append(create('h4','bb-drawer-subhead','HOW THE SPECIALS WORK'));
     const specialList=create('div','bb-special-guide');
@@ -1288,21 +1345,21 @@ export function setup(ctx) {
     const plinkoInfo=drawerGamePanel('plinko');
     tip(plinkoInfo,'Drop cat chips onto the pegs. The landing slot determines the fictional-ticket payout; practice is always free.');
     plinkoDrawerSelect=makeSelect(plinkoInfo,'Default wager','Preselect a stake for the next drop.',[[0,'Free practice'],[1,'1 ticket'],[5,'5 tickets'],[10,'10 tickets']],plinkoStake,'Plinko default wager',v=>{
-      plinkoStake=Number(v);save();refresh();
+      plinkoStake=Number(v);saveNow();refresh();
     });
     const simonInfo=drawerGamePanel('simon');
     tip(simonInfo,'Watch the color pattern, then repeat it. Tap the four pads or press number keys 1–4. Two newly cleared best rounds earn one ticket. A wrong note ends the run.');
     const duckInfo=drawerGamePanel('duck');
     tip(duckInfo,'Tap flying ducks. Eight missed shots always ends the hunt, even in untimed mode. Every three hits above your previous best earns a ticket.');
     duckTimerSelect=makeSelect(duckInfo,'Hunt timer','Untimed runs end after eight misses. Timed runs also end when the clock runs out. Changes apply on your next hunt.',[[0,'Free hunt · untimed'],[30,'Sprint · 30 sec'],[45,'Classic · 45 sec'],[60,'Relaxed · 60 sec'],[90,'Marathon · 90 sec']],duckTimerSeconds,'Duck Hunt timer mode',v=>{
-      duckTimerSeconds=Number(v);save();refresh();
+      duckTimerSeconds=Number(v);saveNow();refresh();
     });
     duckSpeedSelect=makeSelect(duckInfo,'Duck speed','Controls how fast ducks cross the field and how often new ducks spawn. Changes apply on your next hunt.',[['chill','Chill · slow'],['normal','Normal'],['chaos','Chaos · fast']],duckSpeed,'Duck Hunt speed',v=>{
-      duckSpeed=v;save();refresh();
+      duckSpeed=v;saveNow();refresh();
     });
     const slotInfo=drawerGamePanel('slots');
     tip(slotInfo,'A three-reel fictional-ticket slot machine. Any pair pays 1× your stake; triples pay 3–40×. No cash value or purchases. FREE practice never awards tickets.');
-    slotDrawerSelect=makeSelect(slotInfo,'Default stake','FREE spins pay zero; wagering 1, 3 or 5 tickets pays according to the reels.',[[0,'FREE practice'],[1,'1 ticket'],[3,'3 tickets'],[5,'5 tickets']],slotStake,'Slots default stake',v=>{slotStake=Number(v);save();refresh();});
+    slotDrawerSelect=makeSelect(slotInfo,'Default stake','FREE spins pay zero; wagering 1, 3 or 5 tickets pays according to the reels.',[[0,'FREE practice'],[1,'1 ticket'],[3,'3 tickets'],[5,'5 tickets']],slotStake,'Slots default stake',v=>{slotStake=Number(v);saveNow();refresh();});
     const tetrisInfo=drawerGamePanel('tetris');
     tip(tetrisInfo,'Clear full rows of blocks. Left/Right or A/D moves; Up/W/X rotates clockwise and Z counterclockwise; Down/S soft drops; Space hard drops; C holds one piece per turn. Touch buttons provide the same actions. P or the main button pauses. Every 1,000 new personal-best points earns a ticket.');
     const solitaireInfo=drawerGamePanel('solitaire');
@@ -1311,28 +1368,28 @@ export function setup(ctx) {
     tip(froggyInfo,'Hop with Arrow keys, WASD, or the touch pad. Dodge road traffic, ride logs across the river, and fill all five different home slots to advance. Water without a log, cars, and occupied homes cost a life. You have three lives; P or the main button pauses. Every 100 new personal-best points earns a ticket.');
     const chessInfo=drawerGamePanel('chess');
     tip(chessInfo,'Full-rules chess against Gabu, with castling, en passant and promotion (pawns promote to a queen). Tap a cream kitten, then a glowing paw print. The hat is the piece: crown king, tiara queen, turret rook, pointy-hat bishop, helmet knight, bare-headed pawn. Keyboard: arrows pick a square, Enter or Space selects, Escape cancels. Z/U or Undo takes back your move and Gabu\u2019s reply. Score is 10 per point of material you capture plus a checkmate bonus; every 100 new personal-best points earns a ticket.');
-    presetSelects.set('chess',makeSelect(chessInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new game.',GABU_LEVELS,gabuLevels.chess,'Catmate Chess difficulty',v=>{gabuLevels.chess=v;save();refresh();}));
+    presetSelects.set('chess',makeSelect(chessInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new game.',GABU_LEVELS,gabuLevels.chess,'Catmate Chess difficulty',v=>{gabuLevels.chess=v;saveNow();refresh();}));
     const berryInfo=drawerGamePanel('berry');
     tip(berryInfo,'Drop strawberries into the basket and connect four in a row, column or diagonal before Gabu\u2019s blueberries do. Tap a column, use Left/Right then Space or Down, or press 1\u20137. Each won round adds to your streak score and a draw adds a little; one loss ends the streak. Who starts alternates every round. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('berry',makeSelect(berryInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.berry,'Berry Drop difficulty',v=>{gabuLevels.berry=v;save();refresh();}));
+    presetSelects.set('berry',makeSelect(berryInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.berry,'Berry Drop difficulty',v=>{gabuLevels.berry=v;saveNow();refresh();}));
     const treatsInfo=drawerGamePanel('tictac');
     tip(treatsInfo,'Tic-tac-toe with pocky crosses against Gabu\u2019s donuts. Tap a square, use the arrows and Space, or press 1\u20139 (top-left to bottom-right). Wins and draws build your streak score; one loss ends it. Hard Gabu never makes a mistake, so a draw is the best result there. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('tictac',makeSelect(treatsInfo,'Gabu difficulty','How often Gabu slips up. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.tictac,'Tic Tac Treats difficulty',v=>{gabuLevels.tictac=v;save();refresh();}));
+    presetSelects.set('tictac',makeSelect(treatsInfo,'Gabu difficulty','How often Gabu slips up. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.tictac,'Tic Tac Treats difficulty',v=>{gabuLevels.tictac=v;saveNow();refresh();}));
     const cakeInfo=drawerGamePanel('cake');
     tip(cakeInfo,'Tap, Space, Enter or Down drops the swinging tier. Land it dead center for a PERFECT that steadies the tower and builds a streak; sloppy drops make it wobble. A tier only stays if its middle sits over the tier below; a wobbly cake is harder to aim at. Each missed tier costs one of three hearts. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('cake',makeSelect(cakeInfo,'Swing pace','Chill swings slower with a wider perfect window; Chaos swings faster with a tighter one. Changes apply to your next cake.',TOY_PACES.cake,toyPaces.cake,'Cake Tower pace',v=>{toyPaces.cake=v;save();refresh();}));
+    presetSelects.set('cake',makeSelect(cakeInfo,'Swing pace','Chill swings slower with a wider perfect window; Chaos swings faster with a tighter one. Changes apply to your next cake.',TOY_PACES.cake,toyPaces.cake,'Cake Tower pace',v=>{toyPaces.cake=v;saveNow();refresh();}));
     const bubbleInfo=drawerGamePanel('bubble');
     tip(bubbleInfo,'Drag to aim and release to shoot, or aim with Left/Right and shoot with Space. C swaps in the next bubble. Three or more of a kind pop, and anything left hanging falls for bonus points. Every few misses a new row pushes down; a bubble past the dashed line ends the run. Clear the board to level up. Every 300 new personal-best points earns a ticket.');
-    presetSelects.set('bubble',makeSelect(bubbleInfo,'Board difficulty','Chill uses fewer colors and forgives more misses; Chaos adds a color and pushes rows sooner. Changes apply to your next run.',TOY_PACES.bubble,toyPaces.bubble,'Bubble Bloom difficulty',v=>{toyPaces.bubble=v;save();refresh();}));
+    presetSelects.set('bubble',makeSelect(bubbleInfo,'Board difficulty','Chill uses fewer colors and forgives more misses; Chaos adds a color and pushes rows sooner. Changes apply to your next run.',TOY_PACES.bubble,toyPaces.bubble,'Bubble Bloom difficulty',v=>{toyPaces.bubble=v;saveNow();refresh();}));
     const boopInfo=drawerGamePanel('boop');
     tip(boopInfo,'Bunnies pop out of the nine burrows; boop them before they duck back down. Golden bunnies are worth 50 and every five-boop streak adds a bonus. Gabu\u2019s little robots are decoys: booping one costs 20 points and your streak. Tap a burrow, press 1\u20139 (top-left to bottom-right), or move with the arrows and boop with Space. Rounds last 45 seconds. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('boop',makeSelect(boopInfo,'Bunny pace','Chill bunnies stay up longer and fewer pop up at once; Chaos bunnies are quick and crowded. Changes apply to your next round.',TOY_PACES.boop,toyPaces.boop,'Boop-a-Bun pace',v=>{toyPaces.boop=v;save();refresh();}));
+    presetSelects.set('boop',makeSelect(boopInfo,'Bunny pace','Chill bunnies stay up longer and fewer pop up at once; Chaos bunnies are quick and crowded. Changes apply to your next round.',TOY_PACES.boop,toyPaces.boop,'Boop-a-Bun pace',v=>{toyPaces.boop=v;saveNow();refresh();}));
     const waferInfo=drawerGamePanel('wafer');
     tip(waferInfo,'Take turns with Gabu pulling wafers from the tower and stacking them on top. Tap a wafer to pick it, then tap again while the steady-hand meter is green for a clean pull; sloppy pulls make the tower wobble. You can\u2019t pull from the top two layers, and a layer left with only an edge wafer tips everything above it. The outline turns yellow on risky wafers and red on ones that would topple the tower. Whoever topples the tower loses the round; Gabu toppling it extends your streak. Arrows move, Space picks and pulls, Escape cancels. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('wafer',makeSelect(waferInfo,'Gabu difficulty','How steady Gabu\u2019s paws are and how well Gabu picks wafers. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.wafer,'Wobbly Wafers difficulty',v=>{gabuLevels.wafer=v;save();refresh();}));
+    presetSelects.set('wafer',makeSelect(waferInfo,'Gabu difficulty','How steady Gabu\u2019s paws are and how well Gabu picks wafers. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.wafer,'Wobbly Wafers difficulty',v=>{gabuLevels.wafer=v;saveNow();refresh();}));
     const memoryInfo=drawerGamePanel('memory');
     tip(memoryInfo,'Each new tray starts with every capsule open for a few seconds so you can memorize the charms (3 on Cozy, 3.5 on Classic, 4 on Busy); tap to start early. Then open two capsules at a time to find matching pairs. Matches in a row build a streak bonus, and finishing the tray adds a bonus that shrinks with every miss. Tap a capsule, or use the arrows and Space. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('memory',makeSelect(memoryInfo,'Board size','Cozy has 6 pairs, Classic 8 and Busy 10. Changes apply to your next new tray.',[['cozy','Cozy · 6 pairs'],['classic','Classic · 8 pairs'],['busy','Busy · 10 pairs']],toyPaces.memory,'Gacha Match board size',v=>{toyPaces.memory=v;save();refresh();}));
+    presetSelects.set('memory',makeSelect(memoryInfo,'Board size','Cozy has 6 pairs, Classic 8 and Busy 10. Changes apply to your next new tray.',[['cozy','Cozy · 6 pairs'],['classic','Classic · 8 pairs'],['busy','Busy · 10 pairs']],toyPaces.memory,'Gacha Match board size',v=>{toyPaces.memory=v;saveNow();refresh();}));
     const gambitInfo=drawerGamePanel('gambit');
     tip(gambitInfo,'An eight-Ante poker roguelike with 75 original Jokers, five equipped slots, and three blinds per Ante. Beat Ante 8 to bank a win or continue in Endless. Starting decks favor different play styles; choose one before starting a fresh run. Existing classic saves retain their six-round rules until the run ends.');
     tip(gambitInfo,'Combine immediate chips, added Mult, multiplicative boosts, retriggers, held-card effects, and Jokers that grow with your run history. Permanent hand levels, enhanced cards, and crafted decks let your score scale. Chips apply before added Mult, then XMult; Joker slot order does not change scoring. Open Run Info for all 75 Joker descriptions.');
@@ -1348,7 +1405,7 @@ export function setup(ctx) {
     panel.append(button('bb-quiet','Clear high scores',()=>{
       for(const id of Object.keys(bests))bests[id]=0;
       if(game.status!=='playing')game.reset(game.mode,settings.difficulty,0);
-      save();refresh();
+      saveNow();refresh();
     }));
     drawer.root.append(panel);
     try{action=ctx.ui.registerInputBarAction({id:'fuckass_funzone_launch',label:'Fuckass Funzone',subtitle:'Arcade intermission',iconSvg:FUNZONE_TAB_SVG,tooltip:'Open Fuckass Funzone'});
@@ -1364,9 +1421,9 @@ export function setup(ctx) {
       }));
     }
     refresh();
-    return function teardown(){if(disposed)return;disposed=true;stopRaf();game.release();save();sound.dispose();
+    return function teardown(){if(disposed)return;disposed=true;stopRaf();game.release();saveNow();sound.dispose();
       for(const fn of [...off,...listeners])try{fn();}catch{};
       safeDestroy(action);safeDestroy(drawer);safeDestroy(widget);canvas=null;statusEl=null;footerEl=null;reactions.clear();};
-  }catch(err){disposed=true;stopRaf();sound.dispose();for(const fn of [...off,...listeners])try{fn();}catch{};
+  }catch(err){disposed=true;stopRaf();if(saveTimer!==null)clearTimeout(saveTimer);sound.dispose();for(const fn of [...off,...listeners])try{fn();}catch{};
     safeDestroy(action);safeDestroy(drawer);safeDestroy(widget);throw err;}
 }

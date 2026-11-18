@@ -63,6 +63,8 @@ small=font(17)
 label='ARCADE INTERMISSION'
 d.text((517,232),label,font=small,fill=(255,235,252,255),anchor='mm',stroke_width=0)
 base.save(DST/'funzone-logo.png',optimize=True)
+# The largest UI placement is the 265px-wide drawer banner.
+base.resize((530,139),Image.Resampling.LANCZOS).save(DST/'funzone-logo-runtime.png',optimize=True)
 # Snake character/food art is maintained in make_snake_assets.py below.
 # Compact square tile icon for the 2048 selector; functional numbers remain readable text.
 tile=Image.new('RGBA',(128,128));td=ImageDraw.Draw(tile)

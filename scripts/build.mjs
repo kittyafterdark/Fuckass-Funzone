@@ -87,8 +87,7 @@ for(const [name,imports] of classicModules){
 const spriteNames=[...Array.from({length:6},(_,i)=>`bird_flap_${i}`),...Array.from({length:6},(_,i)=>`gabi_fly_${i}`),'bird_dizzy','bird_dead','gabi_hurt','gabi_crash','gabi_dead','cloud','coin','star','heart','flame_0','flame_1','flame_2','record_flag','best_banner','game_over_banner'];
 const assetPaths=Object.fromEntries([
   ...spriteNames.map(name=>[name,`assets/sprites/${name}.png`]),
-  ['cover','assets/cover/jetpack-cover.png'],['icon','assets/funzone/funzone-icon.png'],
-  ['funzone_logo','assets/funzone/funzone-logo.png'],
+  ['funzone_logo','assets/funzone/funzone-logo-runtime.png'],
   ['snake_head','assets/funzone/snake-head.png'],['snake_snack','assets/funzone/snake-snack.png'],
   ...['apple','berry','star','fish','cookie','candy'].map(k=>[`snake_food_${k}`,`assets/funzone/snake-food-${k}.png`]),
   ['merge_tile','assets/funzone/merge-tile.png'],

@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup } from '../dist/frontend.js';
 import { GambitGame, GAMBIT_PACKS } from '../src/gambit.js';
@@ -18,6 +18,7 @@ class ElementMock {
   appendChild(node) { this.append(node); return node; }
   replaceChildren(...nodes) { this.children = nodes; this.textContent = ''; }
   setAttribute(key, value) { this.attributes.set(key, value); }
+  getAttribute(key) { return this.attributes.get(key) ?? null; }
   addEventListener(name, fn) { if (!this.listeners.has(name)) this.listeners.set(name, new Set()); this.listeners.get(name).add(fn); }
   removeEventListener(name, fn) { this.listeners.get(name)?.delete(fn); }
   dispatch(name, payload = {}) { for (const fn of [...(this.listeners.get(name) || [])]) fn({ target: this, preventDefault() {}, stopPropagation() {}, ...payload }); }
@@ -37,6 +38,7 @@ const flatten = node => [node, ...node.children.flatMap(child => child instanceo
 const UPSTREAM_MODES = ['bird', 'gabi', 'snake', '2048', 'match3', 'plinko', 'simon', 'duck', 'slots', 'tetris', 'solitaire', 'froggy',
   'chess', 'berry', 'tictac', 'cake', 'bubble', 'boop', 'wafer', 'memory'];
 function withHost(initial, run) {
+  mock.timers.enable({ apis: ['setTimeout'] });
   const names = ['window', 'document', 'Image', 'HTMLElement', 'localStorage', 'requestAnimationFrame', 'cancelAnimationFrame'];
   const previous = Object.fromEntries(names.map(name => [name, globalThis[name]]));
   const key = 'fuckass_funzone:v1:gambit-integration', cache = new Map([[key, JSON.stringify(initial)]]), queued = new Map();
@@ -59,6 +61,8 @@ function withHost(initial, run) {
   const findClass = name => nodes().find(node => node.className.split(' ').includes(name));
   const api = {
     save: () => JSON.parse(cache.get(key)), window,
+    settleSaves: () => mock.timers.tick(250),
+    pendingFrames: () => queued.size,
     pick(id = 'gambit', autoStart = true) {
       findClass('bb-phone-button').dispatch('click');
       const app = nodes().find(node => node.className === 'bb-app' && node.dataset.game === id);
@@ -91,6 +95,7 @@ function withHost(initial, run) {
   };
   try { mount(); run(api); } finally {
     stop?.(); assert.equal(queued.size, 0, 'teardown cancels the cabinet animation loop');
+    mock.timers.reset();
     for (const [name, value] of Object.entries(previous)) { if (value === undefined) delete globalThis[name]; else globalThis[name] = value; }
   }
 }
@@ -121,6 +126,7 @@ test('bundled Gambit routes number/Space/D and touch controls, reports score, pa
     h.key('Digit1'); h.key('KeyD'); h.frames(20); assert.deepEqual(h.save().puzzles.gambit, paused);
     assert.equal(h.primary().attributes.get('aria-label'), 'Resume');
     h.key('KeyP'); h.frames(20); assert.equal(h.save().puzzles.gambit.phase, 'score', 'score screen waits for player');
+    assert.equal(h.pendingFrames(), 0, 'finished score animation sleeps while waiting for Continue');
     h.key('Space'); assert.equal(h.save().puzzles.gambit.phase, 'play');
     h.action('card', 0); assert.equal(h.save().puzzles.gambit.selected.length, 1, 'touch selects a real card');
     h.window.dispatch('blur'); assert.equal(h.primary().attributes.get('aria-label'), 'Resume');
@@ -141,11 +147,11 @@ test('adding Gambit to a twenty-game profile preserves every existing save, reco
   let profile;
   // Capture real engine snapshots, including a held Tetris piece, pending Gabu reply, and played memory turn.
   withHost({ tickets: 83, bests, gabuLevels, toyPaces }, h => {
-    h.pick('tetris'); h.key('KeyC'); assert.ok(h.save().puzzles.tetris.held);
+    h.pick('tetris'); h.key('KeyC'); h.settleSaves(); assert.ok(h.save().puzzles.tetris.held);
     h.pick('chess'); h.key('ArrowUp'); h.key('Enter'); h.key('ArrowUp'); h.key('ArrowUp'); h.key('Enter');
-    assert.equal(h.save().puzzles.chess.turn, 'b');
+    h.settleSaves(); assert.equal(h.save().puzzles.chess.turn, 'b');
     h.pick('memory'); h.key('Space'); h.key('Space'); h.key('ArrowRight'); h.key('Space');
-    assert.equal(h.save().puzzles.memory.moves, 1);
+    h.settleSaves(); assert.equal(h.save().puzzles.memory.moves, 1);
     h.window.dispatch('blur'); profile = h.save();
   });
   delete profile.puzzles.gambit; delete profile.bests.gambit;
