@@ -38,7 +38,7 @@ const classicModules=[
   ['boop', 'BoopGame, BOOP_PACES'],['boop-render', 'drawBoopABun, boopHoleAt'],
   ['wafer', 'WobblyWafersGame'],['wafer-render', 'drawWobblyWafers, waferAt'],
   ['memory', 'GachaMatchGame, MEMORY_SIZES'],['memory-render', 'drawGachaMatch, capsuleAt'],
-  ['malware', 'MalwareMayhemGame, MALWARE_PACES'],['malware-render', 'drawMalwareMayhem, malwareSwipe'],
+  ['malware', 'MalwareMayhemGame, MALWARE_PACES'],['malware-render', 'drawMalwareMayhem, malwareSwipe, malwareDrag'],
 ];
 // Isolate each new game's helpers while making its named exports available to its renderer.
 function bundleClassicModule(name){

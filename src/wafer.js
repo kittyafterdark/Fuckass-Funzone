@@ -49,7 +49,7 @@ export class WobblyWafersGame {
   newTower(starter) {
     this.layers = Array.from({ length: WAFER_START_LAYERS }, () => [true, true, true]);
     this.wobble = 0; this.starter = starter; this.turn = starter; this.phase = 'turn'; this.result = null;
-    this.selected = null; this.meter = 0; this.meterClock = 0; this.cursor = { row: 4, slot: 1 }; this.crumbs = []; this.sway = 0; this.lastPull = null;
+    this.selected = null; this.meter = 0; this.meterClock = 0; this.cursor = { row: 4, slot: 1 }; this.crumbs = []; this.tip = null; this.sway = 0; this.lastPull = null;
     this.breakRow = -1; this.pulledOut = null;
     this.thinking = starter === 2 ? .8 : 0;
   }
@@ -122,12 +122,18 @@ export class WobblyWafersGame {
     let side = Math.sign(this.lean()) || (unit(this.random) < .5 ? -1 : 1);
     // The top tips toward the side that lost its wafer: its weight is centered over the gap, not over the edge that is left.
     if (reason === 'support') { const remaining = this.layers[row].map((on, i) => on && i !== slot); side = remaining[0] ? 1 : remaining[2] ? -1 : side; }
-    const lh = layerHeight(n);
+    const lh = layerHeight(n), lean = this.lean();
+    // Everything above the break tips over as one piece, hinged on the outer edge of what still stands in the break layer
+    // on the falling side, and speeds up like a falling stick. A wobble topple starts with a shove.
+    const standing = [0, 1, 2].filter(s => this.layers[this.breakRow][s] && !(this.pulledOut?.row === this.breakRow && this.pulledOut?.slot === s));
+    const edges = (standing.length ? standing : [0, 1, 2]).map(s => waferCenterX(s) + side * WAFER_W / 2);
+    const height = Math.max(40, (n - this.breakRow - 1) * lh);
+    this.tip = { x: (side > 0 ? Math.max(...edges) : Math.min(...edges)) + lean * this.breakRow / n, y: WAFER_BASE - (this.breakRow + 1) * lh,
+      side, angle: .03, omega: reason === 'wobble' ? .9 : .4, k: 3 * 900 / (2 * height) };
     for (let r = this.breakRow + 1; r < n; r++) this.layers[r].forEach((on, s) => {
       if (!on) return;
-      const up = r - this.breakRow;
-      this.crumbs.push({ x: waferCenterX(s) + this.lean() * r / n, y: WAFER_BASE - (r + .5) * lh, h: lh - 2, vx: side * (30 + up * 6) + (s - 1) * 10 + (unit(this.random) - .5) * 30, vy: -20 - up * 3,
-        side, spin: 0, spinRate: side * (.6 + up * .05), flavor: r + s, crossed: r % 2 === 1, rest: false });
+      const x = waferCenterX(s) + lean * r / n, y = WAFER_BASE - (r + .5) * lh;
+      this.crumbs.push({ x, y, rx: x - this.tip.x, ry: y - this.tip.y, attached: true, h: lh - 2, vx: 0, vy: 0, side, spin: 0, spinRate: 0, flavor: r + s, crossed: r % 2 === 1, rest: false });
     });
     if (who === 2) {
       this.result = 'win'; this.wins++;
@@ -146,25 +152,82 @@ export class WobblyWafersGame {
     const noise = this.level === 'hard' ? 1 : this.level === 'normal' ? 4 : 8;
     return pool.map(o => ({ ...o, score: o.risk + unit(this.random) * noise })).sort((a, b) => a.score - b.score)[0];
   }
-  /** Falling wafers drop in front of the standing stump and land on the saucer or the table, then settle flat side by side
-   * like spilled cookies. They never rest on the stump or on each other, so nothing can balance in the air or on a ledge. */
+  /** Advances the topple in small steps, so a fast fall never skips past the ground between two frames. */
   settleCrumbs(dt) {
-    for (const c of this.crumbs) {
-      if (c.rest) continue;
-      // A falling wafer tips a little, never more than a gentle tilt, so nothing flips or spins on screen.
-      c.vy += 900 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.spin = Math.max(-.45, Math.min(.45, c.spin + c.spinRate * dt));
-      const floor = Math.abs(c.x - 180) <= SAUCER_RX ? WAFER_BASE : WAFER_TABLE;
-      if (c.y + c.h / 2 < floor) continue;
-      c.y = floor - c.h / 2;
-      // Anything touching a surface lies flat against it, so a sliding wafer never keeps its falling tilt.
-      c.spinRate = 0; c.spin *= Math.max(0, 1 - dt * 12);
-      if (c.vy > 300) { c.vy = -c.vy * .2; c.vx *= .6; continue; }
-      // On the saucer or table it slows to a stop and settles flat, staying on screen.
-      c.vy = 0; c.vx *= Math.max(0, 1 - dt * 10); c.x = Math.max(WAFER_W / 2, Math.min(360 - WAFER_W / 2, c.x));
-      if (Math.abs(c.vx) < 10 && Math.abs(c.spin) < .02) { c.vx = 0; c.spin = 0; c.rest = true; }
-    }
+    for (let left = dt; left > 0; left -= 1 / 60) this.stepCrumbs(Math.min(left, 1 / 60));
     this.crumbs = this.crumbs.filter(c => c.x > -WAFER_W && c.x < 360 + WAFER_W);
   }
+  /** The tipping section turns about its hinge as one rigid piece. Once it has leaned far enough, or a wafer reaches the ground,
+   * it breaks apart: each wafer flies on with the speed and spin the turn gave it, drops in front of the stump, and lands on the
+   * saucer or the table, where the bump takes most of its speed and it flops flat. Wafers never rest on the stump or each other. */
+  stepCrumbs(dt) {
+    const tip = this.tip;
+    if (tip) {
+      tip.omega += tip.k * Math.max(.2, Math.sin(tip.angle + .15)) * dt; tip.angle += tip.omega * dt;
+      const a = tip.side * tip.angle, w = tip.side * tip.omega, cos = Math.cos(a), sin = Math.sin(a);
+      let release = tip.angle >= .45;
+      for (const c of this.crumbs) {
+        if (!c.attached) continue;
+        c.x = tip.x + c.rx * cos - c.ry * sin; c.y = tip.y + c.rx * sin + c.ry * cos; c.spin = a;
+        c.vx = (-c.rx * sin - c.ry * cos) * w; c.vy = (c.rx * cos - c.ry * sin) * w;
+        if (c.y + this.reach(c) >= this.floorAt(c.x)) release = true;
+      }
+      if (!release) return;
+      // Pulling apart costs the wafers some of their speed and spin, so they tumble less than a quarter turn before landing.
+      for (const c of this.crumbs) if (c.attached) { c.attached = false; c.vx = c.vx * .6 + (unit(this.random) - .5) * 24; c.vy *= .6; c.spinRate = Math.max(-1.6, Math.min(1.6, w * .6)); }
+      this.tip = null;
+    }
+    for (const c of this.crumbs) {
+      if (c.rest || c.attached) continue;
+      if (c.grounded) { this.tipOnGround(c, dt); continue; }
+      c.vy += 900 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.spin += c.spinRate * dt;
+      // The edges of the screen are the walls of the room: a wafer bumps off them instead of leaving.
+      if (c.x < WAFER_W / 2 || c.x > 360 - WAFER_W / 2) { c.x = Math.max(WAFER_W / 2, Math.min(360 - WAFER_W / 2, c.x)); c.vx = -c.vx * .3; }
+      const floor = this.floorAt(c.x), reach = this.reach(c);
+      if (c.y + reach < floor) continue;
+      c.y = floor - reach;
+      if (c.vy > 220) { c.vy = -c.vy * .18; c.vx *= .35; c.spinRate *= .35; continue; }
+      // Touching down for good: friction holds the lowest corner where it landed, and gravity tips the wafer about that corner.
+      const k = this.lowestCorner(c); c.vy = 0; c.vx = 0; c.spinRate *= .3;
+      c.grounded = { k, x: c.x + this.cornerOffset(c, k).x, floor, roll: 0 };
+    }
+  }
+  /** Where one corner of a turned wafer sits, relative to its middle. Corners 0 to 3 go round the wafer; 0 and 3 share an end. */
+  cornerOffset(c, k) {
+    const x = (k === 0 || k === 3 ? -1 : 1) * WAFER_W / 2, y = (k < 2 ? -1 : 1) * c.h / 2, cos = Math.cos(c.spin), sin = Math.sin(c.spin);
+    return { x: x * cos - y * sin, y: x * sin + y * cos };
+  }
+  lowestCorner(c) { return [0, 1, 2, 3].reduce((low, k) => this.cornerOffset(c, k).y > this.cornerOffset(c, low).y + 1e-9 ? k : low, 0); }
+  /** A wafer on the ground pivots about the corner touching it, like any rigid block: gravity pulls its middle down past the
+   * corner, harder the further it hangs out, until a long side lies flat. The corner never slides, and each time a new corner
+   * takes the weight the bump soaks up some of the turn. Wafer cookies have rounded ends, so one that comes up onto an end
+   * cannot balance there: it rolls on over the end, the way it was already turning, and lands on its other face. */
+  tipOnGround(c, dt) {
+    const g = c.grounded, a = WAFER_W / 2, b = c.h / 2, inertia = 4 / 3 * (a * a + b * b);
+    let pivot = this.cornerOffset(c, g.k);
+    const partner = this.cornerOffset(c, [3, 2, 1, 0][g.k]), onEnd = pivot.y - partner.y < c.h * .4;
+    if (onEnd) {
+      g.roll ||= Math.sign(c.spinRate) || c.side || 1;
+      c.spinRate += g.roll * (900 * Math.abs(pivot.x) / inertia + 4) * dt;
+    } else { g.roll = 0; c.spinRate += 900 * -pivot.x / inertia * dt; }
+    const flat = Math.round(c.spin / Math.PI) * Math.PI, next = c.spin + c.spinRate * dt;
+    if ((c.spin - flat) * (next - flat) <= 0 && Math.abs(c.spin - flat) < .6) {
+      // A long side is down: it comes to rest flat, where its corner touched.
+      c.spin = flat; pivot = this.cornerOffset(c, g.k);
+      Object.assign(c, { x: Math.max(WAFER_W / 2, Math.min(360 - WAFER_W / 2, g.x - pivot.x)), y: g.floor - c.h / 2, spin: 0, spinRate: 0, rest: true, grounded: null });
+      return;
+    }
+    c.spin = next; pivot = this.cornerOffset(c, g.k);
+    c.x = g.x - pivot.x; c.y = g.floor - pivot.y;
+    // When another corner comes down to the ground, it takes the weight and becomes the new pivot.
+    const low = this.lowestCorner(c);
+    if (low !== g.k && this.cornerOffset(c, low).y > pivot.y + .01) {
+      g.k = low; pivot = this.cornerOffset(c, low); g.x = c.x + pivot.x; c.y = g.floor - pivot.y; c.spinRate *= .6;
+    }
+  }
+  floorAt(x) { return Math.abs(x - 180) <= SAUCER_RX ? WAFER_BASE : WAFER_TABLE; }
+  /** How far below its center a turned wafer reaches. */
+  reach(c) { return Math.abs(WAFER_W / 2 * Math.sin(c.spin)) + Math.abs(c.h / 2 * Math.cos(c.spin)); }
   update(delta) {
     if (!Number.isFinite(delta) || delta <= 0) return;
     const dt = Math.min(delta, .12);
@@ -204,7 +267,7 @@ export class WobblyWafersGame {
     this.breakRow = over && Number.isInteger(data.breakRow) && data.breakRow >= 0 && data.breakRow < this.layers.length ? data.breakRow : over ? Math.floor(this.layers.length / 2) : -1;
     const pulled = data.pulledOut;
     this.pulledOut = over && pulled && whole(pulled.row, this.layers.length - 1) && whole(pulled.slot, 2) ? { row: pulled.row, slot: pulled.slot } : null;
-    this.selected = null; this.meter = 0; this.meterClock = 0; this.crumbs = []; this.sway = 0; this.lastPull = null; this.thinking = this.turn === 2 ? .7 : 0;
+    this.selected = null; this.meter = 0; this.meterClock = 0; this.crumbs = []; this.tip = null; this.sway = 0; this.lastPull = null; this.thinking = this.turn === 2 ? .7 : 0;
     this.status = data.status === 'playing' ? 'paused' : data.status; return true;
   }
 }

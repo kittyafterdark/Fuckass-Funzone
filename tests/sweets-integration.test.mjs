@@ -204,6 +204,12 @@ test('bundled Malware Mayhem plays by keys and swipes, and the run survives relo
     canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 300 });
     canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 240 });
     h.frames(8); h.key('KeyP'); assert.ok(h.save().puzzles.malware.score > ran.score, 'a swipe up turns the virus into the next corridor');
+    h.key('KeyP'); const beforeDrag = h.save().puzzles.malware.score;
+    // A finger that keeps moving steers on every leg, before it lifts.
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 3, clientX: 200, clientY: 300 });
+    for (const [x, y] of [[188, 300], [176, 300], [176, 288], [176, 276]]) canvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 3, clientX: x, clientY: y });
+    h.frames(8); h.key('KeyP'); assert.ok(h.save().puzzles.malware.score > beforeDrag, 'a drag steers while the finger is still down'); h.key('KeyP');
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 3, clientX: 176, clientY: 276 });
     assert.equal(h.drawerSelect('Malware Mayhem pace').value, 'normal');
     const score = h.save().puzzles.malware.score; h.reload(); h.pick('malware');
     assert.equal(h.save().puzzles.malware.score, score, 'the run comes back after a reload');

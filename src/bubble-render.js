@@ -50,9 +50,12 @@ function aimGuide(ctx, game) {
 function launcher(ctx, game) {
   // A sleepy little cloud launcher; the loaded bubble rests on top of it.
   ctx.save(); ctx.translate(LAUNCH_X, LAUNCH_Y + 16);
-  ctx.beginPath(); ctx.arc(-16, 2, 11, Math.PI * .5, Math.PI * 1.5); ctx.arc(-5, -8, 12, Math.PI, Math.PI * 1.9); ctx.arc(10, -6, 11, Math.PI * 1.2, Math.PI * 2);
-  ctx.arc(19, 3, 9, Math.PI * 1.5, Math.PI * .5); ctx.closePath();
-  ctx.fillStyle = '#f4f2ff'; ctx.fill(); ctx.strokeStyle = '#8f86c9'; ctx.lineWidth = 1.4; ctx.stroke();
+  // Overlapping puffs, mirrored on a flat base so the cloud sits level. The outline is drawn as a slightly larger copy
+  // underneath, so it traces the outside of the puffs without seams where they meet.
+  const puffs = [[-18, 2, 10], [-8, -6, 11], [8, -6, 11], [18, 2, 10], [0, 1, 12]];
+  const cloud = grow => { ctx.beginPath(); for (const [x, y, r] of puffs) { ctx.moveTo(x + r + grow, y); ctx.arc(x, y, r + grow, 0, Math.PI * 2); } ctx.rect(-18 - grow, 2, 36 + grow * 2, 10 + grow); ctx.fill(); };
+  ctx.save(); ctx.beginPath(); ctx.rect(-40, -30, 80, 30 + 12 + 1.4); ctx.clip();
+  ctx.fillStyle = '#8f86c9'; cloud(1.4); ctx.fillStyle = '#f4f2ff'; ctx.beginPath(); ctx.rect(-40, -30, 80, 42); ctx.clip(); cloud(0); ctx.restore();
   ctx.strokeStyle = '#4b3f7a'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
   for (const x of [-7, 7]) { ctx.beginPath(); ctx.arc(x, 2, 2.4, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
   ctx.beginPath(); ctx.arc(0, 6, 2, .2, Math.PI - .2); ctx.stroke();

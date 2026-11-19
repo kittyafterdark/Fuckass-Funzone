@@ -69,7 +69,10 @@ test('Wobbly Wafers physics: the tower breaks at the pulled layer, the stump sta
   g.layers[5] = [true, false, true]; g.choose(5, 0); g.meter = .5; g.pull();
   assert.equal(g.result, 'loss'); assert.equal(g.breakRow, 5, 'the break is the layer that lost its support');
   const above = g.layers.slice(6).flat().filter(Boolean).length; assert.equal(g.crumbs.length, above, 'exactly the wafers above the break fall');
-  assert.ok(g.crumbs.every(c => c.vx < 0), 'with only the right edge left, the weight sits over the empty left side, so the top tips left');
+  assert.equal(g.tip.side, -1, 'with only the right edge left, the weight sits over the empty left side, so the top tips left');
+  const middle = () => g.crumbs.reduce((sum, c) => sum + c.x, 0) / g.crumbs.length, before = middle();
+  for (let i = 0; i < 6; i++) g.update(.05);
+  assert.ok(middle() < before - 10 && g.crumbs.every(c => c.spin === g.crumbs[0].spin), 'the top section turns left about its hinge as one rigid piece');
   for (let i = 0; i < 80; i++) g.update(.05);
   assert.ok(g.crumbs.every(c => c.rest), 'every wafer comes to rest');
   for (const c of g.crumbs) {
@@ -80,7 +83,7 @@ test('Wobbly Wafers physics: the tower breaks at the pulled layer, the stump sta
   assert.equal(back.breakRow, 5); assert.deepEqual(back.pulledOut, { row: 5, slot: 0 });
 });
 
-test('Wobbly Wafers: fallen wafers lie flat on screen, never stack into columns, and never slide off tilted', () => {
+test('Wobbly Wafers: fallen wafers fall flat about the corner they land on, stay on screen, and never flip over in the air', () => {
   let seed = 5; const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   for (let round = 0; round < 60; round++) {
     const g = new WobblyWafersGame({ random }); g.start();
@@ -88,7 +91,12 @@ test('Wobbly Wafers: fallen wafers lie flat on screen, never stack into columns,
     const count = g.crumbs.length;
     for (let i = 0; i < 80; i++) {
       g.update(.05);
-      for (const c of g.crumbs) if (!c.rest && c.vy === 0) assert.ok(Math.abs(c.spin) <= .45 && c.spinRate === 0, 'a wafer sliding on a surface is no longer tipping');
+      for (const c of g.crumbs) {
+        if (c.grounded) {
+          for (let k = 0; k < 4; k++) assert.ok(c.y + g.cornerOffset(c, k).y <= c.grounded.floor + .01, 'no corner sinks into the ground');
+          const touching = c.x + g.cornerOffset(c, c.grounded.k).x; assert.ok(Math.abs(touching - c.grounded.x) < .01, 'the corner on the ground never slides');
+        } else if (!c.attached && !c.rest && c.vy !== 0) assert.ok(Math.abs(c.spin) < 1.8, 'a wafer never flips over in the air');
+      }
     }
     assert.equal(g.crumbs.length, count, 'no fallen wafer leaves the screen');
     for (const c of g.crumbs) {

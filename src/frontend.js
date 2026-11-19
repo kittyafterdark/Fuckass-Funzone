@@ -36,7 +36,7 @@ import { drawWobblyWafers, waferAt } from './wafer-render.js';
 import { GachaMatchGame, MEMORY_SIZES } from './memory.js';
 import { drawGachaMatch, capsuleAt } from './memory-render.js';
 import { MalwareMayhemGame, MALWARE_PACES } from './malware.js';
-import { drawMalwareMayhem, malwareSwipe } from './malware-render.js';
+import { drawMalwareMayhem, malwareSwipe, malwareDrag } from './malware-render.js';
 
 const ASSETS = /* BUILD_ASSETS */ {};
 const CSS = /* BUILD_CSS */ '';
@@ -774,8 +774,8 @@ export function setup(ctx) {
     else if(activeMode==='wafer'){const hit=waferAt(x,y,current.layers.length,current.lean(settings.reduceMotion));current.choose(hit?hit.row:-1,hit?hit.slot:0);}
     else if(activeMode==='memory'){const card=capsuleAt(x,y,current.cols,current.rows);if(card>=0)current.flip(card);}
     else if(activeMode==='bubble'){current.setAim(x,y);bubbleAiming=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
-    // Malware Mayhem steers on release: a swipe goes its way, and a tap heads toward where it landed.
-    else if(activeMode==='malware'){malwareFrom={x,y};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
+    // Malware Mayhem steers while the finger moves; a press that never moves is a tap toward where it landed.
+    else if(activeMode==='malware'){malwareFrom={x,y,moved:false};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     else if(activeMode==='tetris'){
       const control=tetrisControlAt(x,y);
       if(control==='left')current.move(-1);else if(control==='right')current.move(1);
@@ -902,7 +902,14 @@ export function setup(ctx) {
     try{canvas?.setPointerCapture?.(e.pointerId);}catch{}refresh();
   }
   function pointerMove(e){
-    // Bubble Bloom alone aims on hover and drag; every other game ignores movement.
+    if(activeMode==='malware'){
+      if(!malwareFrom||!canvas)return;
+      const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
+      const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=malwareDrag(malwareFrom,to);
+      if(dir){classicGames.malware.steer(dir);malwareFrom={...to,moved:true};}
+      return;
+    }
+    // Bubble Bloom aims on hover and drag; the other games ignore movement.
     if(activeMode!=='bubble'||!canvas||classicGames.bubble.status!=='playing')return;
     if(e.pointerType!=='mouse'&&!bubbleAiming)return;
     const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
@@ -911,7 +918,7 @@ export function setup(ctx) {
   function pointerUp(e){
     if(activeMode==='malware'&&malwareFrom){
       const from=malwareFrom,rect=canvas?.getBoundingClientRect();malwareFrom=null;
-      if(e.type!=='pointercancel'&&rect?.width&&rect?.height){const dir=malwareSwipe(classicGames.malware,from,{x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height});if(dir)classicGames.malware.steer(dir);}
+      if(e.type!=='pointercancel'&&rect?.width&&rect?.height){const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=from.moved?malwareDrag(from,to):malwareSwipe(classicGames.malware,from,to);if(dir)classicGames.malware.steer(dir);}
       try{if(canvas?.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
       flushClassic();save();refresh();pointerStart=null;return;
     }
