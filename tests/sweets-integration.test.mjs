@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { setup } from '../dist/frontend.js';
 import { ChessGame } from '../src/chess.js';
 import { sugarPath } from '../src/sugar.js';
+import { LOCK_WORDS } from '../src/lockscreen.js';
 
 class ElementMock {
   constructor(tag = 'div') {
@@ -236,5 +237,28 @@ test('bundled Sugar Snap carves by finger and by key, keeps its difficulty, and 
     assert.equal(h.drawerSelect('Sugar Snap difficulty').value, 'normal');
     const saved = h.save().puzzles.sugar; h.reload(); h.pick('sugar');
     assert.equal(h.save().puzzles.sugar.cut, saved.cut, 'the carved line comes back after a reload');
+  });
+});
+
+test('bundled Gabu’s Lockscreen types letters (P included), pauses on Escape, takes taps, and the run survives reload', () => {
+  withHost({}, h => {
+    // Opening a game from the phone starts it.
+    h.pick('lockscreen'); h.key('KeyP');
+    // Letter guesses save in a batch with the next frame, so Escape (which pauses and saves at once) reads them back.
+    h.key('Escape'); const saved = h.save().puzzles.lockscreen;
+    assert.equal(saved.guessed, 'P', 'P is a guess on the lockscreen, not the pause key'); assert.equal(saved.status, 'paused', 'Escape pauses it');
+    h.key('Escape');
+    const word = LOCK_WORDS[saved.category][saved.index], canvas = h.findClass('bb-canvas');
+    // Tap the first key (A) on the screen keyboard, then type the rest of the word.
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 5, clientX: 30, clientY: 285 });
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 5, clientX: 30, clientY: 285 });
+    h.key('Escape'); assert.ok(h.save().puzzles.lockscreen.guessed.includes('A'), 'a tap on the screen keyboard guesses its letter'); h.key('Escape');
+    for (const ch of new Set(word)) h.key(`Key${ch}`);
+    h.key('Escape'); const done = h.save().puzzles.lockscreen;
+    assert.equal(done.result, 'cracked'); assert.ok(done.score > 0); h.key('Escape');
+    assert.equal(h.drawerSelect('Lockscreen difficulty').value, 'normal');
+    h.key('Enter'); h.key('Escape'); const next = h.save().puzzles.lockscreen; assert.equal(next.phase, 'guess', 'Enter brings the next password');
+    h.reload(); h.pick('lockscreen');
+    assert.equal(h.save().puzzles.lockscreen.index, next.index, 'the run comes back after a reload');
   });
 });

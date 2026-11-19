@@ -1017,6 +1017,43 @@ const SAYINGS=Object.freeze({
    "Game over. [Error log: three candies, zero survivors.]",
    "That's the batch. Go wash your hands, you're sticky with failure."
   ]
+ },
+ lockscreen:{
+  new_best:[
+   "New record?! Who gave you my password manager? Name names.",
+   "Best run yet. [Security audit: Gabu, you absolute clown.]",
+   "Record cracked. I'm changing every password I own. Tonight. Out of spite.",
+   "A new best. Fine. You're good at guessing. Mostly my stuff. Creepy."
+  ],
+  win:[
+   "ACCESS GRANTED?! That was a STRONG password! ...Was it?",
+   "You cracked it. My face scan was literally mid-blink. Unbelievable.",
+   "Hacked. Again. My security is held together with tape and vibes.",
+   "Password breached! I'm adding numbers. And a symbol. And tears.",
+   "Cracked it?! Stop reading my mind, that's MY thing."
+  ],
+  wrong:[
+   "Wrong. My scanner thanks you for the free data.",
+   "Nope. [Logging: user typing with their elbows.]",
+   "That letter isn't in there, babe. Keep smiling for my camera.",
+   "Miss! Every wrong guess brings my scanner closer to your face.",
+   "Not even close. Do you need a hint or a hug? Neither's on offer."
+  ],
+  last:[
+   "One more miss and my scan locks on. No pressure. Lots of pressure.",
+   "Last try before I see you. [Concern marker: mildly elevated.]",
+   "ONE segment left. Think, gremlin. Think with your whole brain."
+  ],
+  reveal:[
+   "Three at once?! Okay, that one hurt my firewall's feelings.",
+   "A whole cluster of letters. My encryption is crying in the corner."
+  ],
+  death:[
+   "LOCKED OUT! Face scan matched: intruder. Hi. Bye.",
+   "Scan locked! Run over, hacker. My passcode stays MINE.",
+   "Intruder photographed. Go home. [Logging: saved as wallpaper.]",
+   "Gotcha! Should've guessed vowels, you absolute amateur."
+  ]
  }
 });
 const MOODS=Object.freeze({idle:'gabu_smug',smug:'gabu_smug',annoyed:'gabu_annoyed',hype:'gabu_hype',panic:'gabu_panic',dizzy:'gabu_dizzy',sleepy:'gabu_sleepy',shock:'gabu_shock',magnate:'gabu_magnate'});
@@ -1051,9 +1088,11 @@ export class ReactionDirector {
   if(game==='wafer'&&event==='pull'&&count%3!==1)return null;
   if(game==='cake'&&event==='land'&&count%3!==1)return null;
   if(game==='malware'&&event==='crash'&&count%2!==1)return null;
+  if(game==='lockscreen'&&event==='wrong'&&count%3!==1)return null;
   // Where Gabu is the opponent, the result is Gabu's own: a player win is Gabu losing (panic), a player loss is Gabu winning (hype).
   // Malware Mayhem counts too: Gabu's antivirus bots are the ones hunting you.
-  const rival=game==='chess'||game==='berry'||game==='tictac'||game==='wafer'||game==='malware';
+  // So does Gabu's Lockscreen: you are breaking into Gabu's phone while its face scan closes in.
+  const rival=game==='chess'||game==='berry'||game==='tictac'||game==='wafer'||game==='malware'||game==='lockscreen';
   if(rival&&event==='win'){mood='panic';priority=5;duration=3.8;}
   else if(rival&&event==='death'){mood='hype';priority=5;duration=3.8;}
   else if(event==='draw'){mood='dizzy';priority=4;duration=3.4;}
@@ -1086,6 +1125,9 @@ export class ReactionDirector {
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
+  else if(game==='lockscreen'&&event==='wrong'){mood='smug';priority=1;}
+  else if(game==='lockscreen'&&event==='last'){mood='smug';priority=3;}
+  else if(game==='lockscreen'&&event==='reveal'){mood='shock';priority=3;}
   else if(game==='sugar'&&event==='free'){mood='hype';priority=4;}
   else if(game==='sugar'&&event==='snap'){mood='smug';priority=4;}
   else if(game==='sugar'&&event==='timeout'){mood='sleepy';priority=3;}
