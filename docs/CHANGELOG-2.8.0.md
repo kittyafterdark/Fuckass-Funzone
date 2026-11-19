@@ -43,7 +43,7 @@ Simulated tracers with hand wobble, easing off when the toffee strains, share of
 
 ### Gabu's Lockscreen
 
-- **Words:** 170 everyday words in five categories anyone can guess: Sweets, Games, Tech, Animals, and Around the House. No jargon. Chill draws shorter words, Hard draws the longer ones and keeps the category hidden until the end.
+- **Words:** 173 everyday words in five categories anyone can guess: Food, Games, Tech, Animals, and Around the House. No jargon. Chill draws shorter words, Hard draws the longer ones and keeps the category hidden until the end.
 - **Input:** type a letter, tap the on-screen keyboard (three rows above Gabu's line), or use the arrows and Enter. P is a letter here, so Escape pauses.
 - **Scoring:** 100 for each passcode, plus 10 a letter, 25 for every spare guess, and 20 more for each passcode already cracked in the run. One lockout ends the run.
 - Saves store the word's list and position, not the word itself, and nothing on the page shows the answer.
@@ -52,8 +52,8 @@ Simulated players who reason from the pattern some of the time, share of words c
 
 | Player | Chill | Normal | Hard |
 | --- | ---: | ---: | ---: |
-| Sharp | 99% | 99% | 95% |
-| Casual | 87% | 77% | 61% |
+| Sharp | 99% | 98% | 93% |
+| Casual | 85% | 80% | 63% |
 
 ## Reworked: Tic Tac Treats only keeps your three newest treats
 

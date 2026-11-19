@@ -8,10 +8,10 @@ export const LOCK_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 // Original word lists, all everyday words people know. Letters only, so every one can be typed on any keyboard.
 // HOME shows on screen as AROUND THE HOUSE.
 export const LOCK_WORDS = Object.freeze({
-  SWEETS: Object.freeze([
-    'COOKIE', 'DONUT', 'TOFFEE', 'WAFER', 'CUPCAKE', 'PUDDING', 'BROWNIE', 'SPRINKLES', 'CARAMEL', 'LOLLIPOP', 'MARSHMALLOW', 'CHURRO', 'GUMDROP',
-    'TRUFFLE', 'PRETZEL', 'CRUMBLE', 'FUDGE', 'TART', 'CANDY', 'BUTTERSCOTCH', 'CHEESECAKE', 'HONEYCOMB', 'GINGERBREAD', 'PANCAKE', 'WAFFLE',
-    'MUFFIN', 'CHOCOLATE', 'POPCORN', 'JELLYBEAN', 'MILKSHAKE', 'SUNDAE', 'CROISSANT', 'CUSTARD']),
+  FOOD: Object.freeze([
+    'PIZZA', 'BURGER', 'PASTA', 'NOODLES', 'TACO', 'BURRITO', 'SUSHI', 'SALAD', 'CHEESE', 'BREAD', 'PANCAKE', 'WAFFLE', 'BACON', 'POTATO', 'FRIES',
+    'NACHOS', 'POPCORN', 'COOKIE', 'DONUT', 'CUPCAKE', 'BANANA', 'CARROT', 'KETCHUP', 'AVOCADO', 'SANDWICH', 'SPAGHETTI', 'DUMPLING', 'CHOCOLATE',
+    'STRAWBERRY', 'PINEAPPLE', 'WATERMELON', 'BROCCOLI', 'MEATBALL', 'MUSHROOM', 'CROISSANT', 'MILKSHAKE']),
   GAMES: Object.freeze([
     'JOYSTICK', 'TOKEN', 'JACKPOT', 'COMBO', 'PINBALL', 'PIXEL', 'RESPAWN', 'CONTROLLER', 'PLAYER', 'LEVEL', 'BONUS', 'TICKET', 'CHECKPOINT',
     'GLITCH', 'CREDITS', 'PRIZE', 'STREAK', 'LEADERBOARD', 'GAMEPAD', 'QUEST', 'PUZZLE', 'DICE', 'CARDS', 'CHESS', 'TOURNAMENT', 'CHAMPION',
@@ -29,7 +29,7 @@ export const LOCK_WORDS = Object.freeze({
     'MIRROR', 'DESK', 'CHAIR', 'GUITAR', 'SKATEBOARD', 'CALENDAR', 'WINDOW', 'CURTAINS', 'CARPET', 'BOOKSHELF', 'NOTEBOOK', 'TOOTHBRUSH', 'CANDLE',
     'SLIPPERS', 'PAJAMAS', 'TOOLBOX', 'SCREWDRIVER', 'HAMMOCK', 'PLANT']),
 });
-export const LOCK_LABELS = Object.freeze({ SWEETS: 'SWEETS', GAMES: 'GAMES', TECH: 'TECH', ANIMALS: 'ANIMALS', HOME: 'AROUND THE HOUSE' });
+export const LOCK_LABELS = Object.freeze({ FOOD: 'FOOD', GAMES: 'GAMES', TECH: 'TECH', ANIMALS: 'ANIMALS', HOME: 'AROUND THE HOUSE' });
 export const LOCK_CATEGORIES = Object.freeze(Object.keys(LOCK_WORDS));
 // Pace sets how many wrong guesses the face scan needs to lock on, which word lengths come up, and whether the category is shown.
 const PACE = Object.freeze({

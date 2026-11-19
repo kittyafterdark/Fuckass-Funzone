@@ -9,7 +9,7 @@ const wrongLetters = g => [...LOCK_LETTERS].filter(ch => !g.word.includes(ch));
 test('Lockscreen words: letters only, no repeats, and every difficulty has plenty in range', () => {
   const all = Object.values(LOCK_WORDS).flat();
   assert.ok(all.every(word => /^[A-Z]{4,13}$/.test(word))); assert.equal(new Set(all).size, all.length, 'no word appears twice');
-  assert.deepEqual(LOCK_CATEGORIES, ['SWEETS', 'GAMES', 'TECH', 'ANIMALS', 'HOME']);
+  assert.deepEqual(LOCK_CATEGORIES, ['FOOD', 'GAMES', 'TECH', 'ANIMALS', 'HOME']);
   for (const pace of LOCK_PACES) {
     const pool = lockPool(pace); assert.ok(pool.length >= 40, `${pace} has enough words`);
     const lengths = pool.map(([cat, i]) => LOCK_WORDS[cat][i].length);
@@ -47,8 +47,8 @@ test('difficulty sets the misses allowed, the word lengths and whether the categ
   assert.ok(hard.word.length >= 8 && chill.word.length <= 7);
   assert.equal(new LockscreenGame({ pace: 'turbo' }).pace, 'normal');
   const reveal = []; const g = new LockscreenGame({ random: () => .5, onEvent: e => reveal.push(e) }); g.start();
-  g.category = 'SWEETS'; g.index = LOCK_WORDS.SWEETS.indexOf('MARSHMALLOW'); g.guess('L');
-  assert.ok(!reveal.includes('reveal')); g.guess('M'); g.guess('A'); assert.ok(!reveal.includes('reveal'), 'two of a letter is not a cluster');
+  g.category = 'FOOD'; g.index = LOCK_WORDS.FOOD.indexOf('STRAWBERRY'); g.guess('T');
+  assert.ok(!reveal.includes('reveal'), 'one of a letter is not a cluster'); g.guess('R'); assert.ok(reveal.includes('reveal'), 'three Rs at once is');
 });
 
 test('the keyboard cursor moves on the 9-9-8 grid and Enter guesses its letter', () => {
@@ -68,7 +68,7 @@ test('Lockscreen saves restore paused and reject tampered boards', () => {
   assert.equal(bad({ guessed: 'AA' }), false); assert.equal(bad({ guessed: 'a' }), false); assert.equal(bad({ category: 'SECRETS' }), false);
   assert.equal(bad({ index: 999 }), false); assert.equal(bad({ guessed: LOCK_LETTERS }), false, 'a live board cannot be over the miss limit');
   assert.equal(bad({ phase: 'over', result: 'cracked' }), false, 'a cracked board must be solved');
-  assert.equal(bad({ status: 'dead' }), false); assert.equal(bad({ used: ['SWEETS:999'] }), false); assert.equal(bad({ pace: 'turbo' }), false);
+  assert.equal(bad({ status: 'dead' }), false); assert.equal(bad({ used: ['FOOD:999'] }), false); assert.equal(bad({ pace: 'turbo' }), false);
 });
 
 test('the Lockscreen renderer draws every state and the keys hit-test where they are drawn', () => {
