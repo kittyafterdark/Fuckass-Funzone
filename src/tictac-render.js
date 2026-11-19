@@ -64,6 +64,7 @@ export function drawTicTacTreats(canvas, game, { best = 0, images = {}, reduced 
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   rounded(ctx, 20, 45, 320, 1, 0, '#4a3546');
   drawTxt(ctx, `ROUND ${game.round}  ·  WINS ${game.wins}  ·  DRAWS ${game.draws}`, 22, 66, 10, '#e2c9da');
+  drawTxt(ctx, 'ONLY YOUR 3 NEWEST TREATS STAY', 180, 84, 8, '#bfa9c4', 'center');
   drawTxt(ctx, LEVEL_NAMES[game.level] || 'GABU', 338, 66, 10, '#e2c9da', 'right');
   // Quilted picnic cushion with stitched dividers.
   rounded(ctx, BX - 14, BY - 14, CELL * 3 + 28, CELL * 3 + 28, 26, '#5f4277');
@@ -79,10 +80,17 @@ export function drawTicTacTreats(canvas, game, { best = 0, images = {}, reduced 
   }
   ctx.setLineDash([]);
   const yourTurn = game.status === 'playing' && game.phase === 'turn' && game.turn === 1;
+  // The treat each side loses on its next placement shows faded, so you can plan around it. Nothing blinks.
+  const fadingNext = [game.fading(1), game.fading(2)], center = i => [BX + (i % 3) * CELL + CELL / 2, BY + Math.floor(i / 3) * CELL + CELL / 2];
+  for (const e of game.eaten) {
+    if (reduced) continue;
+    const [cx, cy] = center(e.cell), t = e.age / .35;
+    (e.who === 1 ? drawPockyMark : drawDonutMark)(ctx, cx, cy, 62 * (1 - t * .6), 1 - t);
+  }
   for (let i = 0; i < 9; i++) {
-    const cx = BX + (i % 3) * CELL + CELL / 2, cy = BY + Math.floor(i / 3) * CELL + CELL / 2, grow = reduced ? 1 : .55 + .45 * Math.min(1, game.placed[i] || 1);
-    if (game.board[i] === 1) drawPockyMark(ctx, cx, cy, 62 * grow);
-    else if (game.board[i] === 2) drawDonutMark(ctx, cx, cy, 62 * grow);
+    const [cx, cy] = center(i), grow = reduced ? 1 : .55 + .45 * Math.min(1, game.placed[i] || 1), alpha = fadingNext.includes(i) && game.phase === 'turn' ? .42 : 1;
+    if (game.board[i] === 1) drawPockyMark(ctx, cx, cy, 62 * grow, alpha);
+    else if (game.board[i] === 2) drawDonutMark(ctx, cx, cy, 62 * grow, alpha);
     else if (cursor && yourTurn && i === game.cursor) drawPockyMark(ctx, cx, cy, 54, .28);
   }
   if (cursor && game.status === 'playing' && game.phase === 'turn') {
@@ -98,14 +106,14 @@ export function drawTicTacTreats(canvas, game, { best = 0, images = {}, reduced 
   }
   const thinking = game.status === 'playing' && game.phase === 'turn' && game.turn === 2;
   if (thinking) drawSprite(ctx, images.gabu_smug, 92, 384, 26, 26);
-  const legend = game.status === 'dead' ? 'THREE DONUTS IN A ROW' : game.phase === 'over' ? (game.result === 'win' ? 'THREE POCKY! TAP FOR THE NEXT ROUND' : 'A TIE. TAP FOR THE NEXT ROUND') :
+  const legend = game.status === 'dead' ? 'THREE DONUTS IN A ROW' : game.phase === 'over' ? (game.result === 'win' ? 'THREE POCKY! TAP FOR THE NEXT ROUND' : 'THE TREATS WENT STALE. TAP FOR THE NEXT ROUND') :
     yourTurn ? 'YOUR TREAT' : thinking ? 'GABU IS PLOTTING' : 'TIC TAC TREATS';
   drawTxt(ctx, legend, 180, 404, 12, game.phase === 'over' && game.result === 'win' ? '#ffe08a' : '#fdf2f7', 'center');
   drawTxt(ctx, game.starter === 2 ? 'GABU STARTED THIS ROUND' : 'YOU STARTED THIS ROUND', 180, 423, 9, '#d6bccc', 'center');
   drawTxt(ctx, 'TAP A SQUARE  ·  ARROWS + SPACE  ·  KEYS 1–9', 180, 441, 9, '#bfa9c4', 'center');
   if (game.status === 'dead') overlay(ctx, 'GABU WINS', `Streak over: ${game.wins} ${game.wins === 1 ? 'win' : 'wins'}, ${game.score} points.`, 'PRESS PLAY FOR A NEW STREAK', '#a99cf5');
   else if (game.status === 'paused') overlay(ctx, 'PAUSED', 'Gabu is pretending not to look.', 'PRESS PLAY TO RESUME', '#b8a7ff');
-  else if (game.status === 'idle') overlay(ctx, 'TIC TAC TREATS', 'Three pocky in a row beats the donuts.', 'PRESS PLAY OR TAP TO START', '#ff7fae');
+  else if (game.status === 'idle') overlay(ctx, 'TIC TAC TREATS', 'Three in a row wins, but only your 3 newest treats stay.', 'PRESS PLAY OR TAP TO START', '#ff7fae');
   ctx.restore();
 }
 function overlay(ctx, message, sub, hint, accent) {

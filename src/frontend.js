@@ -546,7 +546,7 @@ export function setup(ctx) {
   const CLASSIC_SOUNDS=Object.freeze({
     chess:{move:'tick',gabu_move:'tick',capture:'coin',queen_taken:'coin',gabu_capture:'hit',queen_lost:'hit',check:'start',gabu_check:'hit',castle:'flap',promote:'score',draw:'hit',undo:'flap'},
     berry:{drop:'drop',gabu_drop:'drop',block:'coin',fork:'score',draw:'hit',round:'start'},
-    tictac:{place:'tick',gabu_place:'tick',block:'coin',fork:'score',draw:'hit',round:'start'},
+    tictac:{place:'tick',gabu_place:'tick',block:'coin',draw:'hit',round:'start'},
     cake:{drop:'flap',land:'drop',perfect:'coin',combo:'score',milestone:'score',miss:'hit',wobble:'tick'},
     bubble:{shoot:'thrust',bounce:'tick',pop:'pop',big_pop:'score',avalanche:'score',miss:'drop',ceiling:'hit',clear:'score',swap:'flap'},
     boop:{boop:'pop',gold:'coin',combo:'score',bot:'hit',whiff:'tick'},
@@ -725,7 +725,7 @@ export function setup(ctx) {
       if(activeMode==='cake'&&current.crumbs.length>0)return true;
       if(activeMode==='wafer'&&(current.crumbs.some(crumb=>!crumb.rest)||current.lastPull?.age<.4))return true;
       if((activeMode==='boop'||activeMode==='bubble')&&current.effects.length>0)return true;
-      if(activeMode==='tictac'&&current.placed.some(time=>time>0&&time<1))return true;
+      if(activeMode==='tictac'&&(current.placed.some(time=>time>0&&time<1)||current.eaten.length>0))return true;
       if(activeMode==='memory'&&current.cards.some(card=>card.turn!==(card.up||card.matched||current.preview>0?1:0)))return true;
       return activeMode!=='solitaire'&&current.status==='playing';
     }
@@ -1435,8 +1435,8 @@ export function setup(ctx) {
     tip(berryInfo,'Drop strawberries into the basket and connect four in a row, column or diagonal before Gabu\u2019s blueberries do. Tap a column, use Left/Right then Space or Down, or press 1\u20137. Each won round adds to your streak score and a draw adds a little; one loss ends the streak. Who starts alternates every round. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('berry',makeSelect(berryInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.berry,'Berry Drop difficulty',v=>{gabuLevels.berry=v;saveNow();refresh();}));
     const treatsInfo=drawerGamePanel('tictac');
-    tip(treatsInfo,'Tic-tac-toe with pocky crosses against Gabu\u2019s donuts. Tap a square, use the arrows and Space, or press 1\u20139 (top-left to bottom-right). Wins and draws build your streak score; one loss ends it. Hard Gabu never makes a mistake, so a draw is the best result there. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('tictac',makeSelect(treatsInfo,'Gabu difficulty','How often Gabu slips up. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.tictac,'Tic Tac Treats difficulty',v=>{gabuLevels.tictac=v;saveNow();refresh();}));
+    tip(treatsInfo,'Tic-tac-toe with pocky crosses against Gabu\u2019s donuts. Tap a square, use the arrows and Space, or press 1\u20139 (top-left to bottom-right). Each side keeps only its three newest treats: placing a fourth eats your oldest, which shows faded before it goes, so plan around it. Wins build your streak score, a round of 30 treats with no line goes stale for a small bonus, and one loss ends the streak. Hard Gabu looks seven moves ahead. Every 100 new personal-best points earns a ticket.');
+    presetSelects.set('tictac',makeSelect(treatsInfo,'Gabu difficulty','How far ahead Gabu looks and how often he slips up. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.tictac,'Tic Tac Treats difficulty',v=>{gabuLevels.tictac=v;saveNow();refresh();}));
     const cakeInfo=drawerGamePanel('cake');
     tip(cakeInfo,'Tap, Space, Enter or Down drops the swinging tier. Land it dead center for a PERFECT that steadies the tower and builds a streak; sloppy drops make it wobble. A tier only stays if its middle sits over the tier below; a wobbly cake is harder to aim at. Each missed tier costs one of three hearts. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('cake',makeSelect(cakeInfo,'Swing pace','Chill swings slower with a wider perfect window; Chaos swings faster with a tighter one. Changes apply to your next cake.',TOY_PACES.cake,toyPaces.cake,'Cake Tower pace',v=>{toyPaces.cake=v;saveNow();refresh();}));

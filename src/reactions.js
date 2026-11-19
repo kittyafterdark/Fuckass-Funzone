@@ -646,12 +646,6 @@ const SAYINGS=Object.freeze({
    "Denied. I've played this since my firmware was in diapers.",
    "You thought? You thought. Adorable."
   ],
-  fork:[
-   "Two ways to win?! That's a fork! RUDE!",
-   "Wait. I can only block one of those. Damn it.",
-   "You set a trap in tic-tac-toe?! Who raised you?!",
-   "[Error log: two lines, zero solutions.] I'm logging off."
-  ],
   win:[
    "Three pocky?! In TIC-TAC-TOE?! I'm deleting my settings.",
    "You beat me at the simplest game ever made. I need a minute.",
@@ -667,11 +661,11 @@ const SAYINGS=Object.freeze({
    "Streak over! Outplayed by pastry! PASTRY!"
   ],
   draw:[
-   "Cat's game. Nobody ate anything. Tragic.",
-   "Draw. As the ancient scrolls foretold.",
-   "Tic-tac-toe draw. Somewhere a math teacher is nodding.",
+   "Thirty treats and no winner. Everything's stale now. Gross.",
+   "We ate each other's snacks for ages and nobody won. Iconic.",
+   "Stale draw. [Logging: two gremlins chasing their own tails.]",
    "Nobody wins. Nobody learns. Next.",
-   "Another draw. My cooling fan just yawned."
+   "That went on so long my cooling fan filed a complaint."
   ]
  },
  cake:{
