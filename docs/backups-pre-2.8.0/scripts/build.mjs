@@ -26,6 +26,14 @@ const shop=read('src/shop.js');
 const miniGames=read('src/mini-games.js');
 const miniRender=read('src/mini-games-render.js');
 const rewards=read('src/rewards.js');
+const gambitModules=[['gambit-rules','GAMBIT_HANDS, GAMBIT_JOKERS, scoreGambitHand, gambitCardData, GAMBIT_SCORE_LIMIT, GAMBIT_LEVEL_LIMIT, gambitJokerModifiers, gambitJokerPayout'],['gambit','GambitGame, GAMBIT_DECKS, GAMBIT_PACKS, GAMBIT_BOSSES'],['gambit-art','GAMBIT_SUIT_COLORS, drawGambitCard, drawGambitJoker, drawGambitDeck, drawGambitPack'],['gambit-render','drawGambit, gambitActions, gambitHitAt']];
+function bundleGambitModule(name){
+  const source=read(`src/${name}.js`);
+  const names=[...source.matchAll(/^export\s+(?:const|let|class|function)\s+(\w+)/gm)].map(match=>match[1]);
+  if(!names.length)throw Error(`No public exports in ${name}`);
+  const body=source.replace(/^import\s+\{[^}]*\}\s+from\s+['"]\.\/gambit(?:-(?:rules|art))?\.js['"];?\s*$/gm,'').replace(/^export\s+/gm,'');
+  return `const {${names.join(',')}}=(()=>{\n${body}\nreturn {${names.join(',')}};\n})();`;
+}
 const classicModules=[
   ['tetris', 'TetrisGame'],['tetris-render', 'drawTetris, tetrisControlAt'],
   ['solitaire', 'SolitaireGame'],['solitaire-render', 'drawSolitaire, solitaireHitAt'],
@@ -49,6 +57,10 @@ function bundleClassicModule(name){
 }
 let ui=read('src/frontend.js');
 const css=read('src/style.css');
+for(const [name,imports] of gambitModules){
+  const anchor=`import { ${imports} } from './${name}.js';`;
+  requireOnce(ui,anchor,`${name} import`);ui=ui.replace(anchor,()=>bundleGambitModule(name));
+}
 const arcadeSvg=read('assets/funzone/arcade-tab.svg').trim();
 if(!/^<svg\s[^>]*xmlns="http:\/\/www\.w3\.org\/2000\/svg"/.test(arcadeSvg) || !arcadeSvg.includes('viewBox="0 0 32 32"') || !arcadeSvg.endsWith('</svg>') || /<\/?(?:script|foreignObject|image|text|use|style)\b|on(?:load|click|error)\s*=|href\s*=|url\s*\(|https?:\/\/(?!www\.w3\.org\/2000\/svg)/i.test(arcadeSvg)) throw Error('Unsafe or invalid arcade tab SVG');
 const importAnchor="import { ArcadeEngine, WORLD, MODE, DEFAULT_SETTINGS, sanitizeSettings, lifecycleTransition, gabiFlightFrame } from './engine.js';";
@@ -70,13 +82,12 @@ for(const [needle,label] of [[importAnchor,'engine import'],[puzzleAnchor,'puzzl
 for(const [name,imports] of classicModules){
   const anchor=`import { ${imports} } from './${name}.js';`;
   requireOnce(ui,anchor,`${name} import`);
-  ui=ui.replace(anchor,bundleClassicModule(name));
+  ui=ui.replace(anchor,()=>bundleClassicModule(name));
 }
 const spriteNames=[...Array.from({length:6},(_,i)=>`bird_flap_${i}`),...Array.from({length:6},(_,i)=>`gabi_fly_${i}`),'bird_dizzy','bird_dead','gabi_hurt','gabi_crash','gabi_dead','cloud','coin','star','heart','flame_0','flame_1','flame_2','record_flag','best_banner','game_over_banner'];
 const assetPaths=Object.fromEntries([
   ...spriteNames.map(name=>[name,`assets/sprites/${name}.png`]),
-  ['cover','assets/cover/jetpack-cover.png'],['icon','assets/funzone/funzone-icon.png'],
-  ['funzone_logo','assets/funzone/funzone-logo.png'],
+  ['funzone_logo','assets/funzone/funzone-logo-runtime.png'],
   ['snake_head','assets/funzone/snake-head.png'],['snake_snack','assets/funzone/snake-snack.png'],
   ...['apple','berry','star','fish','cookie','candy'].map(k=>[`snake_food_${k}`,`assets/funzone/snake-food-${k}.png`]),
   ['merge_tile','assets/funzone/merge-tile.png'],
@@ -84,7 +95,7 @@ const assetPaths=Object.fromEntries([
   ...['smug','annoyed','hype','panic','dizzy','sleepy','shock'].map(k=>[`gabu_${k}`,`assets/match3/gabu-${k}.png`]),
   ['gabu_magnate','assets/plinko/gabu-monocle.png'],['gabu_peek','assets/plinko/gabu-peek.png'],['plinko_chip','assets/plinko/cat-chip.png'],['plinko_app','assets/plinko/plinko-app.png'],
 ]);
-const svgPaths={...Object.fromEntries(['simon','duck','slots','tetris','solitaire','froggy','chess','berry','treats','cake','bubble','boop','wafer','memory'].map(k=>[`${k}_app`,`assets/funzone/${k}-app.svg`])),...Object.fromEntries(['cat','heart','star','fish','cookie','gem','rocket','bomb'].map(k=>[`match_vec_${k}`,`assets/match3/vector/${k}.svg`])),match_vec_hint:'assets/match3/vector/hint.svg',plinko_crest:'assets/plinko/cat-crest.svg'};
+const svgPaths={...Object.fromEntries(['simon','duck','slots','tetris','solitaire','froggy','chess','berry','treats','cake','bubble','boop','wafer','memory','gambit'].map(k=>[`${k}_app`,`assets/funzone/${k}-app.svg`])),...Object.fromEntries(['cat','heart','star','fish','cookie','gem','rocket','bomb'].map(k=>[`match_vec_${k}`,`assets/match3/vector/${k}.svg`])),match_vec_hint:'assets/match3/vector/hint.svg',plinko_crest:'assets/plinko/cat-crest.svg'};
 const assets={};
 for(const [key,p] of Object.entries(assetPaths)) {
   const contents=fs.readFileSync(path.join(root,p));

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+<rect x="3" y="3" width="58" height="58" rx="16" fill="#ffd6e5" stroke="#e57a9f" stroke-width="2.5"/>
+<path d="M32 4v8" stroke="#d9578a" stroke-width="2" stroke-linecap="round"/>
+<path d="M32 15.5c-3.3-2.6-1.6-5.8 0-3.8c1.6-2 3.3 1.2 0 3.8z" fill="#ff6f9f"/>
+<rect x="14" y="51" width="36" height="5" rx="2.5" fill="#f4fbff" stroke="#a9cde3" stroke-width="1.2"/>
+<rect x="16" y="40" width="32" height="11" rx="4" fill="#ffe7b3"/>
+<path d="M16 44c0-2 1-4 4-4h24c3 0 4 2 4 4c-2 0-2 3-4 3s-2-2-4-2s-2 3-4 3s-2-3-4-3s-2 2-4 2s-2-3-4-3s-2 2-4 2z" fill="#fffaf0"/>
+<rect x="19" y="29" width="26" height="11" rx="4" fill="#ffb7c9"/>
+<path d="M19 33c0-2 1-4 4-4h18c3 0 4 2 4 4c-2 0-2 3-4 3s-2-2-4-2s-2 3-4 3s-2-3-4-3s-2 2-4 2s-2-3-4-1z" fill="#fff4f7"/>
+<rect x="22" y="19" width="20" height="10" rx="4" fill="#d6b5f2"/>
+<path d="M22 23c0-2 1-4 4-4h12c3 0 4 2 4 4c-2 0-2 2.5-4 2.5s-2-2-4-2s-2 2.5-4 2.5s-2-2.5-4-2.5s-2 2-4 0z" fill="#fbf5ff"/>
+<g fill="#ff5d8f"><rect x="25" y="44" width="3" height="1.2" rx=".6"/><rect x="36" y="45" width="3" height="1.2" rx=".6"/><rect x="30" y="33" width="3" height="1.2" rx=".6"/></g>
+<g fill="#8fd8ff"><rect x="31" y="46" width="3" height="1.2" rx=".6"/><rect x="24" y="34" width="3" height="1.2" rx=".6"/><rect x="37" y="33.5" width="3" height="1.2" rx=".6"/></g>
+<path d="M32 19c-4-2-3-6 0-4.5c3-1.5 4 2.5 0 4.5z" fill="#ff4f7b"/>
+</svg>

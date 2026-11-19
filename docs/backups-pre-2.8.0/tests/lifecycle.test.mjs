@@ -10,6 +10,7 @@ class ElementMock {
   append(...nodes){this.children.push(...nodes)} appendChild(node){this.append(node);return node;}
   replaceChildren(...nodes){this.children=[...nodes];this.textContent='';}
   setAttribute(key,value){this.attributes.set(key,value)}
+  getAttribute(key){return this.attributes.get(key)??null}
   addEventListener(event,callback){if(!this.listeners.has(event))this.listeners.set(event,new Set());this.listeners.get(event).add(callback)}
   removeEventListener(event,callback){this.listeners.get(event)?.delete(callback)}
   dispatch(event,payload={}){for(const fn of [...(this.listeners.get(event)||[])])fn({target:this,preventDefault(){},stopPropagation(){},...payload});}
@@ -17,20 +18,30 @@ class ElementMock {
   getBoundingClientRect(){return {left:0,top:0,width:360,height:452}}
   setPointerCapture(){} hasPointerCapture(){return false}releasePointerCapture(){}
   getContext(){if(this.tagName!=='CANVAS')return null;return {
-    setTransform(){},clearRect(){},fillRect(){},strokeRect(){},beginPath(){},roundRect(){},fill(){},stroke(){},ellipse(){},arc(){},moveTo(){},lineTo(){},bezierCurveTo(){},quadraticCurveTo(){},closePath(){},fillText(){},drawImage(){},save(){},restore(){},translate(){},rotate(){},createLinearGradient(){return{addColorStop(){}}}
+    setTransform:()=>{this.paints=(this.paints||0)+1},clearRect(){},fillRect(){},strokeRect(){},beginPath(){},roundRect(){},fill(){},stroke(){},ellipse(){},arc(){},moveTo(){},lineTo(){},bezierCurveTo(){},quadraticCurveTo(){},closePath(){},fillText(){},drawImage(){},save(){},restore(){},translate(){},rotate(){},scale(){},createLinearGradient(){return{addColorStop(){}}},createRadialGradient(){return{addColorStop(){}}}
   };}
 }
 function flatten(node){return [node,...node.children.flatMap(c=>c instanceof ElementMock?flatten(c):[])];}
 
-test('Spindle mock: mounts, starts once, survives end, handles stop and teardown without leaks',()=>{
+test('Spindle mock: mounts, starts once, survives end, handles stop and teardown without leaks',t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
  const old={window:globalThis.window,document:globalThis.document,Image:globalThis.Image,HTMLElement:globalThis.HTMLElement,localStorage:globalThis.localStorage,requestAnimationFrame:globalThis.requestAnimationFrame,cancelAnimationFrame:globalThis.cancelAnimationFrame};
  const window=new ElementMock('window');const document=new ElementMock('document');
  document.createElement=(tag)=>new ElementMock(tag);document.createElementNS=(_ns,tag)=>new ElementMock(tag);document.hidden=false;
  globalThis.window=window;globalThis.document=document;globalThis.HTMLElement=ElementMock;
- globalThis.Image=class extends ElementMock {constructor(){super('img')}set src(url){this._src=url}get src(){return this._src}};
- const cache=new Map();cache.set('fuckass_funzone:v1:test-profile',JSON.stringify({tickets:250}));globalThis.localStorage={getItem:k=>cache.get(k)||null,setItem:(k,v)=>cache.set(k,v)};
+ const canvasImages=[];
+ globalThis.Image=class extends ElementMock {
+   constructor(){super('img');this.complete=false;canvasImages.push(this);}
+ };
+ const cache=new Map();cache.set('fuckass_funzone:v1:test-profile',JSON.stringify({tickets:250}));let writes=0;globalThis.localStorage={getItem:k=>cache.get(k)||null,setItem:(k,v)=>{writes++;cache.set(k,v)}};
  const queued=new Map();let id=0;
  globalThis.requestAnimationFrame=(cb)=>{queued.set(++id,cb);return id};globalThis.cancelAnimationFrame=id=>queued.delete(id);
+ let clock=16;
+ function nextFrame(step=16){
+   assert.equal(queued.size,1,'exactly one scheduled frame');
+   const [[key,callback]]=[...queued];
+   queued.delete(key);clock+=step;callback(clock);
+ }
  const ws=new Map();const placements={widget:null,drawer:null,action:null};
  const ctx={host:{extensionInstallationId:'test-profile'},events:{on:(event,fn)=>{ws.set(event,fn);return()=>ws.delete(event)}},ui:{
    createFloatWidget:()=>{
@@ -42,6 +53,21 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
  }};
  try {
   const stop=setup(ctx);assert.equal(placements.widget.visible,false);assert.equal(ws.size,3);
+  assert.equal(canvasImages.length,0,'setup leaves canvas art unloaded');
+  const canvas=flatten(placements.widget.root).find(x=>x.tagName==='CANVAS');assert.ok(canvas);
+  assert.ok(flatten(placements.widget.root).filter(x=>x.tagName==='IMG').every(img=>img.loading==='lazy'));
+  placements.action.click();
+  nextFrame();
+  assert.equal(canvas.paints,1);
+  assert.ok(canvasImages.length>0&&canvasImages.length<10,'the idle Bird scene requests only art it uses');
+  assert.equal(queued.size,0,'idle playfield sleeps');
+  const loaded=canvasImages[0];loaded.complete=true;loaded.dispatch('load');
+  nextFrame();
+  assert.equal(canvas.paints,2,'late art repaints an idle playfield once');
+  assert.equal(queued.size,0);
+  window.dispatch('resize');
+  nextFrame();
+  assert.equal(queued.size,0,'resize requests exactly one idle frame');
   assert.match(placements.drawerOptions.iconSvg, /viewBox="0 0 32 32"/,'uses the supplied SVG rather than host generic extension icon');
   assert.match(placements.drawerOptions.iconSvg, /M30\.47 4\.57/,'supplied arcade path is intact');
   assert.equal(placements.actionOptions.iconSvg,placements.drawerOptions.iconSvg,'the chat launcher also uses the custom SVG');
@@ -56,9 +82,9 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   assert.equal(behavior.length,1,'Arcade behavior is independently collapsible');
   const gameTabs=sidebar.filter(x=>x.className==='bb-drawer-game-tab');
   const gamePanels=sidebar.filter(x=>x.className==='bb-drawer-game-page');
-  const modes=['bird','gabi','snake','2048','match3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory'];
-  assert.deepEqual(gameTabs.map(x=>x.dataset.game),modes,'all twenty games have compact tabs');
-  assert.deepEqual(gamePanels.map(x=>x.dataset.game),modes,'all twenty games have independent help panels');
+  const modes=['bird','gabi','snake','2048','match3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory','gambit'];
+  assert.deepEqual(gameTabs.map(x=>x.dataset.game),modes,'all twenty-one games have compact tabs');
+  assert.deepEqual(gamePanels.map(x=>x.dataset.game),modes,'all twenty-one games have independent help panels');
   assert.equal(sidebar.filter(x=>x.attributes.get('role')==='tablist').length,1,'one radio-style tablist');
   assert.equal(sidebar.filter(x=>x.className==='bb-drawer-details').length,0,'accordion skyscraper removed');
   const selectedTabs=()=>gameTabs.filter(x=>x.attributes.get('aria-selected')==='true');
@@ -79,7 +105,7 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   tablist.dispatch('keydown',{key:'Home',target:tabBy('plinko')});
   assert.equal(selectedTabs()[0].dataset.game,'bird','Home focuses first game');
   tablist.dispatch('keydown',{key:'End',target:tabBy('bird')});
-  assert.equal(selectedTabs()[0].dataset.game,'memory','End focuses last game');
+  assert.equal(selectedTabs()[0].dataset.game,'gambit','End focuses last game');
   clickTab('match3');
   assert.equal(visiblePanels().length,1,'never displays stacked game pages');
   const specials=sidebar.filter(x=>x.className==='bb-special-card');assert.equal(specials.length,3,'explains match-3, rocket and bomb');
@@ -168,18 +194,27 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   assert.equal(shopPage.hidden,true);
 
   ws.get('GENERATION_STARTED')({generationId:'G1'});
-  const canvas=flatten(placements.widget.root).find(x=>x.tagName==='CANVAS');assert.ok(canvas);
   canvas.dispatch('pointerdown',{pointerType:'touch',pointerId:1,button:0});
   canvas.dispatch('pointerup',{pointerId:1});
   ws.get('GENERATION_ENDED')({generationId:'G1'});
   assert.equal(placements.widget.visible,true,'a finished answer never interrupts an active run');
-  // The single phone picker opens twenty game apps without a permanent tab rail.
+  // The single phone picker opens twenty-one game apps without a permanent tab rail.
   const apps=flatten(placements.widget.root).filter(x=>x.className==='bb-app');
-  assert.equal(apps.length,20,'Funzone OS exposes twenty custom-asset apps');
+  assert.equal(apps.length,21,'Funzone OS exposes twenty-one custom-asset apps');
   assert.equal(flatten(placements.widget.root).filter(x=>x.className==='bb-mode').length,0);
   const pick=mode=>{const picker=flatten(placements.widget.root).find(x=>x.className.includes('bb-phone-button'));assert.ok(picker);picker.dispatch('click');
     const target=apps.find(x=>x.title===`Open ${mode}`);assert.ok(target,mode);target.dispatch('click');};
+  const beforeSnake=canvasImages.length;
   pick('Snake');
+  nextFrame();
+  assert.equal(canvasImages.length,beforeSnake+2,'Snake requests its head and current snack only');
+  assert.equal(canvasImages[beforeSnake].src,apps.find(x=>x.title==='Open Snake').children[0].children[0].src);
+  window.dispatch('blur');
+  nextFrame();
+  assert.equal(queued.size,0,'paused Snake sleeps after the final blur repaint');
+  window.dispatch('focus');
+  nextFrame();
+  assert.equal(queued.size,0,'focus repaints but leaves Snake paused');
   const root=flatten(placements.widget.root).find(x=>x.className.includes('bb-float'));
   root.dispatch('keydown',{target:canvas,code:'ArrowDown'});
   pick('2048');root.dispatch('keydown',{target:canvas,code:'ArrowLeft'});
@@ -189,6 +224,18 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   assert.equal(primary.attributes.get('aria-label'),'Pause','2048 started from directional input');
   primary.dispatch('click');assert.equal(primary.attributes.get('aria-label'),'Resume');
   primary.dispatch('click');assert.equal(primary.attributes.get('aria-label'),'Pause');
+  const pauseIcon=primary.children[0];
+  const beforeKeys=writes;
+  for(const code of ['ArrowUp','ArrowRight','ArrowDown','ArrowLeft']){
+    root.dispatch('keydown',{target:canvas,code});
+  }
+  assert.equal(primary.children[0],pauseIcon,'unchanged action keeps its existing SVG');
+  assert.equal(writes,beforeKeys,'input burst does not synchronously write');
+  t.mock.timers.tick(249);
+  assert.equal(writes,beforeKeys);
+  t.mock.timers.tick(1);
+  assert.equal(writes,beforeKeys+1,'burst serializes the settled state once');
+  assert.ok(JSON.parse(cache.get('fuckass_funzone:v1:test-profile')).puzzles.merge.moves>0);
   assert.equal(flatten(placements.widget.root).filter(x=>x.className.includes('bb-ticker')).length,0,'tickets moved into single top line');
   assert.equal(flatten(placements.widget.root).filter(x=>x.className.includes('bb-wallet')).length,1,'tickets have one compact wallet');
   assert.equal(flatten(placements.widget.root).filter(x=>x.className.includes('bb-mini')).length,3,'duplicate pause button removed');
@@ -215,7 +262,11 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   function tap(ix){const cx=28+ix%7*44+20,cy=77+Math.floor(ix/7)*44+20;
     canvas.dispatch('pointerdown',{pointerType:'touch',pointerId:1,clientX:cx,clientY:cy});
     canvas.dispatch('pointerup',{pointerType:'touch',pointerId:1,clientX:cx,clientY:cy});}
+  const beforeCascade=writes;
   tap(legal[0]);tap(legal[1]);
+  assert.equal(writes,beforeCascade,'the cascade leaves storage untouched until it settles');
+  t.mock.timers.tick(250);
+  assert.equal(writes,beforeCascade+1);
   const updatedMatch=JSON.parse(cache.get('fuckass_funzone:v1:test-profile')).puzzles.match3;
   assert.equal(updatedMatch.moves,1,'two adjacent taps make a real match');
   assert.ok(updatedMatch.score>0,'match score survives in localStorage');
@@ -231,6 +282,7 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   for(const ix of next){const cx=wide.x+(ix%8)*wide.step+wide.cell/2,cy=wide.y+Math.floor(ix/8)*wide.step+wide.cell/2;
     canvas.dispatch('pointerdown',{pointerType:'touch',pointerId:5,clientX:cx,clientY:cy});
     canvas.dispatch('pointerup',{pointerType:'touch',pointerId:5,clientX:cx,clientY:cy});}
+  t.mock.timers.tick(250);
   widthSave=JSON.parse(cache.get('fuckass_funzone:v1:test-profile'));
   assert.equal(widthSave.puzzles.match3.moves,1,'wide touch hitboxes map to real matches');
   widthSelect.value='7';widthSelect.dispatch('change');
@@ -256,6 +308,14 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   const activeDrop=JSON.parse(cache.get('fuckass_funzone:v1:test-profile'));
   assert.equal(activeDrop.puzzles.plinko.ball.stake,0,'practice drop costs no tickets');
   assert.equal(activeDrop.tickets,walletBefore,'practice preserves wallet');
+  const saved=()=>JSON.parse(cache.get('fuckass_funzone:v1:test-profile'));
+  for(let i=0;i<120&&saved().puzzles.plinko.ball;i++)nextFrame(100);
+  assert.equal(saved().puzzles.plinko.ball,null,'Payout settles in the real widget tick');
+  const paintsAtLanding=canvas.paints;
+  nextFrame(100);
+  assert.equal(canvas.paints,paintsAtLanding+1,'Plinko still paints while its payout highlight is fading');
+  for(let i=0;i<50&&queued.size;i++)nextFrame(100);
+  assert.equal(queued.size,0,'Plinko sleeps once payout feedback expires');
   // New games run through the real bundled browser entrypoint, not an isolated engine.
   pick('Simon Says');
   let miniSave=JSON.parse(cache.get('fuckass_funzone:v1:test-profile'));
@@ -274,6 +334,7 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   assert.equal(configuredDuck.speed,'chaos','next hunt uses the selected flight speed');
   primary.dispatch('click'); // Launch after configuring a fresh hunt; the first canvas tap would otherwise only start it.
   canvas.dispatch('pointerdown',{pointerType:'touch',pointerId:9,clientX:180,clientY:190});
+  window.dispatch('pagehide');
   miniSave=JSON.parse(cache.get('fuckass_funzone:v1:test-profile'));
   assert.equal(miniSave.puzzles.duck.misses,1,'missed duck shot updates persisted hit/miss counters');
   pick('Gabu Slots');
@@ -302,21 +363,29 @@ test('Spindle mock: mounts, starts once, survives end, handles stop and teardown
   assert.equal(miniSave.puzzles.slots.pending.stake,3,'switching modes preserves the pending paid spin');
   assert.equal(primary.attributes.get('aria-label'),'Resume','paused paid spin can resume without recharging');
   primary.dispatch('click');
-  let clock=32;
-  for(let i=0;i<16;i++){
-    const task=[...queued.entries()][0];assert.ok(task,'active arcade has a live RAF');
-    queued.delete(task[0]);clock+=100;task[1](clock);
-  }
+  for(let i=0;i<16&&queued.size;i++)nextFrame(100);
   miniSave=JSON.parse(cache.get('fuckass_funzone:v1:test-profile'));
   assert.equal(miniSave.puzzles.slots.pending,null,'paid spin finishes after resume');
   assert.equal(miniSave.tickets,walletBeforeFree-3+miniSave.puzzles.slots.lastPayout,'reel payout settles exactly once');
+  const initialPaints=canvas.paints;
+  for(let i=0;i<50&&queued.size;i++)nextFrame(100);
+  assert.equal(queued.size,0,'settled slots and their reaction return to sleep');
+  assert.equal(canvas.paints,initialPaints,'reaction expiration does not repaint the settled slot machine');
   pick('Gabi Jetpack');
 
   assert.equal(JSON.parse(cache.get('fuckass_funzone:v1:test-profile')).arcadeGame,'gabi');
   assert.ok(flatten(placements.widget.root).some(x=>x.tagName==='SVG'),'SVG icons are built as real DOM elements');
-  let tasks=[...queued.entries()];for(const [key,fn] of tasks){queued.delete(key);fn(16);}
+  pick('Duck Hunt');
+  const missesBeforeStop=saved().puzzles.duck.misses;
+  canvas.dispatch('pointerdown',{pointerType:'touch',pointerId:8,clientX:180,clientY:190});
+  assert.equal(saved().puzzles.duck.misses,missesBeforeStop,'latest input is awaiting the write batch');
   stop();stop();
-  assert.equal(ws.size,0);assert.equal(queued.size,0);
+  assert.equal(saved().puzzles.duck.misses,missesBeforeStop+1,'teardown flushes the latest unsaved input');
+  const writesAfterStop=writes;
+  for(const art of canvasImages)art.dispatch('load');
+  t.mock.timers.tick(1000);
+  assert.equal(writes,writesAfterStop,'teardown cleared the pending save');
+  assert.equal(ws.size,0);assert.equal(queued.size,0,'late images cannot restart RAF after teardown');
   assert.equal(placements.widget.destroyed,true);assert.equal(placements.drawer.destroyed,true);assert.equal(placements.action.destroyed,true);
   assert.equal(window.listeners.get('blur')?.size||0,0);
  } finally {for(const [k,v] of Object.entries(old)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}

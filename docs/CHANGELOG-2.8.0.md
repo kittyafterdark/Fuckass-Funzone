@@ -1,63 +1,122 @@
-# Fuckass Funzone 2.8.0 — Malware Mayhem, settled wafers and a clearer Gabu
+# Fuckass Funzone 2.8.0 — Three new games, a shifting Tic Tac Treats, and fixes to the 2.7.0 batch
 
-## What's new: Malware Mayhem
+## What's new
 
-**Malware Mayhem** joins Funzone OS as the twenty-first game. You play a little neon virus loose in Gabu's mainframe, eating every byte of his data while his antivirus bots hunt you. The bots are built like the robot decoys in Boop-a-Bun, each with its own neon trim and Gabu's pale left eye and cyan right eye. It shares the arcade's dark cyber palette, drawn as a monitor with a cyan bezel, scanlines and a "GABU OS" window for its start, pause and game-over screens.
+Three games join Funzone OS, bringing the cabinet to twenty-four. Each has its own art and app icon, a help tab with settings in the drawer, a personal best, a ticket every 500 new personal-best points, saves that resume paused, and Gabu commentary using Gabu's existing faces.
 
-- **Steering:** swipe to turn, tap toward where the virus should go, or use the arrows or WASD. A turn asked for a little early is remembered and taken at the next opening, and turning back works anywhere, even between two cells.
-- **Exploit chips:** four per maze. One corrupts the bots: they go gray with crossed-out eyes and run, and crashing one sends it to its reboot dock for 100, 200, 400, then 800 points in the same exploit. The time left shows as a draining gold bar under the monitor, and the bots fade back to color as it ends; nothing blinks.
-- **Hearts and levels:** a bot that catches you costs one of three hearts and sends everyone back to the start with a short READY? pause. Eating every byte pays a bonus and starts the next level, where the bots move a little faster, though never as fast as the virus.
+| Game | What it is | Settings |
+| --- | --- | --- |
+| **Malware Mayhem** | You are a little neon virus loose in Gabu's mainframe, eating every byte of his data while his antivirus bots hunt you. An exploit chip corrupts the bots so you can crash them back to their reboot dock for 100, 200, 400, then 800 points. Three hearts; clearing the maze starts a faster level. | Pace: Chill · slow / Normal / Chaos · fast |
+| **Sugar Snap** | Gabu presses a shape into a disc of honeycomb toffee, and you carve it out with a needle before the timer runs out. Carving too fast or scratching off the line strains the toffee; two warning cracks appear, and at full strain it snaps. Three candies per run. | Difficulty: Chill · more time / Normal / Hard · no mercy |
+| **Gabu's Lockscreen** | Guess the passcode on Gabu's phone one letter at a time. Every wrong guess turns one segment of its face scan red and pulls the scanner in; when it locks on, his eyes glare back and you are locked out. | Difficulty: Chill · 7 misses / Normal · 6 misses / Hard · no mercy |
+
+### Malware Mayhem
+
+- **Steering:** swipe to turn, keep a finger moving to steer on every leg of the drag, tap toward where the virus should go, or use the arrows or WASD. A turn asked for a little early is taken at the next opening, and turning back works anywhere, even between two cells. Swiping on the board never scrolls the page or drags the cabinet.
 - **The maze** is an original layout. Every corridor connects and none dead-ends, so the virus always has somewhere to run; a test keeps it that way.
-- **Pace** follows Duck Hunt's names: Chill · slow sends two slower bots that lose your trail more often, with an 8-second exploit; Normal sends three; Chaos · fast sends four faster bots that rarely lose your trail, with a 4.5-second exploit. Like the other games, a new pace applies to the next run.
-- **Gabu** judges through the existing `ReactionDirector` with Gabu's existing faces. His bots are doing the hunting, so it is his game to win, like the four games played against him: he is hyped when a bot catches you or the run ends, panics when you wipe his mainframe, is shocked by an exploit, and annoyed when you crash his bots. Single bytes stay quiet. His line sits over the title bar, so it never covers the maze.
-- **Sounds** use the existing synth and stay silent with Sound effects off. **Saves** keep the bytes left, score, hearts, level and pace; a resumed run comes back paused at the start positions.
+- **Exploits:** the bots go gray with crossed-out eyes and run. The time left drains as a gold bar; nothing blinks.
+- **Look:** a monitor in the arcade's dark cyber palette with a "GABU OS" window for its start, pause and game-over screens. Each bot has its own neon trim and Gabu's amber and blue eyes.
+- **Gabu** treats it as his game to win, like the games played against him: hyped when a bot catches you, panicking when you wipe his mainframe, shocked by an exploit, annoyed when you crash his bots.
 
-Each pace was checked with simulated players that steer for the nearest byte along paths clear of the bots, with careful, average and sloppy reaction times. Median score over 120 runs of up to five minutes:
+Simulated players steering for the nearest byte while avoiding the bots, median score over 120 runs:
 
 | Player | Chill | Normal | Chaos |
 | --- | ---: | ---: | ---: |
-| Careful | 11,970 (4 levels) | 7,110 (2) | 3,520 (0) |
-| Average | 11,560 (4) | 4,130 (1) | 2,420 (0) |
-| Sloppy | 2,390 (1) | 1,700 (0) | 1,440 (0) |
+| Careful | 11,970 | 7,110 | 3,520 |
+| Average | 11,560 | 4,130 | 2,420 |
+| Sloppy | 2,390 | 1,700 | 1,440 |
 
-## Fixed: Wobbly Wafers pieces sliding off screen or resting on nothing after a topple
+### Sugar Snap
 
-After the tower fell, the first few wafers landed normally, but the rest slid sideways while still tilted and disappeared off the edge of the screen, and some came to rest in mid-air. The topple threw wafers so hard that most landed near the edge; a wafer that landed on another fallen wafer kept sliding at a fixed speed along the whole row; and the broken stump counted as a solid ledge across its full width, including spots whose wafers were already gone. Falling wafers are now thrown more gently, tip a little in the air, and drop in front of the stump onto the saucer or table, where they lie flat side by side, the way the missed tiers in Cake Tower fall. They never rest on the stump or on each other, so none can float, build a column, or slide away. Across 600 simulated topples (14,962 wafers), every wafer settled flat on screen within 1.25 seconds.
+- **Eight original shapes**, gentlest to trickiest: heart, fish, mushroom, star, cat, crescent moon, a robot head and a lightning bolt. Each lap through them narrows the line a little.
+- **Carving:** drag along the pressed line with a finger or mouse, or hold Space to carve on along the line. The needle's tip glows mint on the line and red off it. Its speed is judged over about a quarter second, so uneven pointer events never count as rushing, and sweeping across the plate is always safe.
+- **Scoring:** 100 for each shape, plus 10 for every second left, up to 100 for a clean carve, and 50 more for each lap.
+- **Gabu** gloats at a snap, frets at a crack, sighs at a timeout, and is grudgingly hyped by a clean pop.
+
+Simulated tracers with hand wobble, easing off when the toffee strains, share of shapes freed over 60 runs:
+
+| Player | Chill | Normal | Hard |
+| --- | ---: | ---: | ---: |
+| Careful | 100% | 100% | 100% |
+| Average | 100% | 100% | 77% |
+| Sloppy | 100% | 40% | 0% |
+
+### Gabu's Lockscreen
+
+- **Words:** 170 everyday words in five categories anyone can guess: Sweets, Games, Tech, Animals, and Around the House. No jargon. Chill draws shorter words, Hard draws the longer ones and keeps the category hidden until the end.
+- **Input:** type a letter, tap the on-screen keyboard (three rows above Gabu's line), or use the arrows and Enter. P is a letter here, so Escape pauses.
+- **Scoring:** 100 for each passcode, plus 10 a letter, 25 for every spare guess, and 20 more for each passcode already cracked in the run. One lockout ends the run.
+- Saves store the word's list and position, not the word itself, and nothing on the page shows the answer.
+
+Simulated players who reason from the pattern some of the time, share of words cracked over 300 runs:
+
+| Player | Chill | Normal | Hard |
+| --- | ---: | ---: | ---: |
+| Sharp | 99% | 99% | 95% |
+| Casual | 87% | 77% | 61% |
+
+## Reworked: Tic Tac Treats only keeps your three newest treats
+
+Tic Tac Treats and Berry Drop played almost the same loop, and plain tic-tac-toe mostly ends in a draw. Now each side keeps only its three newest treats on the board: placing a fourth eats your oldest, which shows faded beforehand (no blinking) so you can plan around it. Gabu searches with the same rule, two, four and seven moves ahead on Chill, Normal and Hard. Hard is beatable now, so it earns a bonus like the other levels. A round of 30 treats with no line goes stale and counts as a draw. Forks can no longer happen, so the fork event, sound and lines are gone for this game only. Older saves keep their streak and score and start the current round on a fresh board.
+
+Simulated opponents, 200 rounds each, with alternating starters (W/L/D from the player's side):
+
+| Player | Chill Gabu | Normal Gabu | Hard Gabu |
+| --- | --- | --- | --- |
+| Strong | 194 / 5 / 1 | 175 / 21 / 4 | 99 / 101 / 0 |
+| Medium | 147 / 53 / 0 | 92 / 105 / 3 | 19 / 172 / 9 |
+| Weak | 75 / 125 / 0 | 31 / 169 / 0 | 5 / 195 / 0 |
+
+## Fixed: Wobbly Wafers pieces floating, sliding off screen, or resting on nothing after a topple
+
+After the tower fell, some wafers slid sideways while still tilted and left the screen, and some came to rest in mid-air on an invisible ledge. The section above the break now tips over as one rigid piece around the outer edge of the stump, then breaks apart. Each wafer falls under gravity, bounces off the screen's side walls, pivots on whichever corner touches down, rolls off its rounded ends, and comes to rest lying flat on the saucer or table. Across 60 random topples in the tests, no wafer sinks below the floor, slides along it while tilted, or comes to rest anywhere but flat and on screen.
 
 ## Fixed: Cake Tower wobble warning sounded like a crash
 
-Since 2.7.0 a wobbly cake never loses tiers on its own; wobble only makes it harder to aim. The wobble warning still used the crash buzz and Gabu's panicked face, which suggested something had gone wrong. It now plays a light tick, and Gabu is smug about it instead. The crash buzz plays only when a tier misses and costs a heart.
+A wobbly cake never loses tiers on its own; wobble only makes it harder to aim. The warning used the crash buzz and Gabu's panicked face, which suggested something had gone wrong. It is now a light tick with his smug face, and the crash buzz plays only when a tier misses and costs a heart.
 
-## Fixed: Gabu's line covering things you need to see
+## Fixed: Gabu's line in the newer games
 
-In five of the 2.7.0 games the bottom of the board is in play, and Gabu's line covered it: your back rank in Catmate Chess, the launcher and next bubble in Bubble Bloom, the bottom burrows in Boop-a-Bun, the steady-hand meter in Wobbly Wafers, and the last row of capsules in Gacha Match. In those games his line now sits over the title bar, the same way Plinko already moves it. In all the newer games the bubble uses a slightly smaller face and text, so it stays clear of the board on the narrow 292 px cabinet too, including the cake stand in Cake Tower. Kitty's original games keep their existing bubble.
+His line now uses Kitty's own box, at the same size and at the bottom, in every newer game. The layouts moved instead, so nothing you need to see sits under it on the standard cabinet: Catmate Chess's board sits a little higher, Gacha Match's tray ends above it, and Bubble Bloom's field is drawn about 12% smaller so its launcher and next bubble sit above it (same ten columns, same rows, same rules; saves load as before). Only footer hints go under his line, as in the original games, and every layout looks the same with commentary turned off. While you hold a wafer, Gabu stays quiet so the steady-hand meter shows.
 
-**No changes** to any existing game's rules, scoring, difficulty, ticket formulas, shop items, saves, or Gabu's lines. Kitty's original games react exactly as before: every event they can send was replayed through the old and new reaction code with identical results.
+## Fixed: Bubble Bloom's launcher cloud looked tilted
+
+The cloud's puffs are now mirrored on a flat base, so it sits level.
+
+## Changed: darker cabinets and Gabu's real eyes
+
+- **Darker cabinets:** Catmate Chess, Tic Tac Treats, Cake Tower and Gacha Match move from pastel boards to the arcade's dark cabinet look, so they sit beside the original games without going kawaii. Cake Tower becomes a late-night bakery whose sky deepens as the cake climbs. Their app icons now use dark tiles too. Boop-a-Bun keeps its bright garden, like the arcade's other colorful games.
+- **Gabu's eyes:** everything that stands in for Gabu now has his amber right eye and blue left eye, as on the Snake head: his chess kittens, Berry Drop's blueberries, Tic Tac Treats' donuts, Boop-a-Bun's robot decoys and the antivirus bots. Catmate Chess's header and app icon show his king kitten.
+- **Gabu's lines** for all the newer games were rewritten in his voice: crude, sarcastic, with bracketed log sidebars and concern markers.
+
+**No changes** to the original games' rules, scoring, difficulty, ticket formulas, shop items, saves, art or Gabu's lines. Every event the original games can send was replayed through the old and new reaction code with identical results.
 
 ## Files changed
 
-- `src/malware.js`, `src/malware-render.js`: the Malware Mayhem rules engine and canvas renderer. The engine has no DOM or Spindle dependencies.
-- `assets/funzone/malware-app.svg`: the launcher icon.
-- `src/wafer.js`: gentler topple and flat landing for fallen wafers.
-- `src/frontend.js`: Malware Mayhem's roster entry, swipe, tap and keyboard steering, drawer tab and pace select, sounds, saves and NEW BEST; the light wobble cue for Cake Tower.
-- `src/reactions.js`: Gabu's lines, moods and timing for Malware Mayhem, and his face for the Cake Tower wobble warning.
-- `src/rewards.js`: a ticket every 500 new Malware Mayhem personal-best points.
-- `src/style.css`: Gabu's line placement and size in the newer games.
-- `scripts/build.mjs`: bundles the new modules and icon; release banner.
-- `tests/malware.test.mjs`, `tests/sweets-integration.test.mjs`, `tests/wafer.test.mjs`, `tests/lifecycle.test.mjs`: new rule, renderer and bundled-host tests, the wafer landing test, and the game count.
-- `spindle.json`, `package.json`, `README.md`, `docs/TESTING.md` (items 45 to 50), `demo-classics-qa.html`: release metadata, instructions, and the preview link.
-- `dist/frontend.js`: rebuilt with all 83 PNG/SVG assets embedded.
+- `src/malware.js`, `src/malware-render.js`, `src/sugar.js`, `src/sugar-render.js`, `src/lockscreen.js`, `src/lockscreen-render.js`: the three new games' rules engines and canvas renderers. The engines have no DOM or Spindle dependencies.
+- `assets/funzone/malware-app.svg`, `assets/funzone/sugar-app.svg`, `assets/funzone/lockscreen-app.svg`: their launcher icons. `chess-app.svg`, `berry-app.svg`, `treats-app.svg`, `cake-app.svg`, `memory-app.svg`: dark tiles and Gabu's eyes.
+- `src/tictac.js`, `src/tictac-render.js`: the three-treat rule, Gabu's search, stale draws, and the faded next-to-go treat.
+- `src/wafer.js`: how the tower topples and how fallen wafers come to rest.
+- `src/bubble.js`, `src/bubble-render.js`: the field scaled to sit above Gabu's line, and the level cloud.
+- `src/chess-render.js`, `src/cake-render.js`, `src/memory-render.js`, `src/connect-render.js`, `src/boop-render.js`: darker palettes, layouts clear of Gabu's line, and Gabu's eyes.
+- `src/frontend.js`: the three new games' roster entries, input, drawer tabs and settings, sounds, saves and NEW BEST; Tic Tac Treats' drawer tip; the light wobble cue for Cake Tower; Gabu stays quiet while a wafer is held.
+- `src/reactions.js`: Gabu's lines and moods for the newer games, including the three new ones.
+- `src/rewards.js`: a ticket every 500 new personal-best points in each new game.
+- `scripts/build.mjs`: bundles the new modules and icons; release banner.
+- `tests/malware.test.mjs`, `tests/sugar.test.mjs`, `tests/lockscreen.test.mjs`: new rule, renderer and save tests. `tests/treats.test.mjs`, `tests/wafer.test.mjs`, `tests/chess.test.mjs`: updated for the new rules and layout. `tests/sweets-integration.test.mjs`: the new games in the bundled build. `tests/lifecycle.test.mjs`, `tests/gambit-integration.test.mjs`: the game count and the new games' default settings.
+- `spindle.json`, `package.json`, `README.md`, `docs/TESTING.md` (items 45 to 54), `demo-classics-qa.html`: release metadata, instructions and the preview links.
+- `dist/frontend.js`: rebuilt with all 84 PNG/SVG assets embedded.
 
-Original versions of every edited source, config, doc and test are retained at `docs/backups-pre-2.8.0/`. The update manifest lists changed files and their checksums.
+Original versions of every edited source, config, doc, test and icon are retained at `docs/backups-pre-2.8.0/`. The update manifest lists changed files and their checksums.
 
 ## Verification
 
-- `node scripts/build.mjs` builds successfully.
-- `node --test tests/*.test.mjs`: **192/192 passed**.
-- Malware Mayhem was played in Chromium at 382 px and 292 px cabinet widths and with real touch swipes on an emulated phone, with no page errors; swiping on the board never scrolls the page.
-- Random-input stress runs (700 taps, swipes, keys, pauses, blurs and restarts per game, with reloads) on Malware Mayhem and every 2.7.0 game produced no page errors, and every save restored.
+- `node scripts/build.mjs` builds successfully, and a fresh build matches the committed `dist/frontend.js`.
+- `node --test tests/*.test.mjs`: **287/287 passed**.
+- The new games were played in Chromium at 382 px and 292 px cabinet widths, with a real mouse and with real touch on an emulated phone, with no page errors. Swiping, dragging and carving on the board never scroll the page or drag the cabinet.
+- Random-input stress runs (700 taps, drags, keys, letters, pauses, blurs and restarts per game, with reloads) on every newer game and on Gabu's Gambit produced no page errors, and every save restored.
 - Live Lumiverse on desktop and real devices still needs a check.
 
 ## Compatibility
 
-No data migration. Uses the existing `fuckass_funzone:v1:<extensionInstallationId>` storage key and adds `toyPaces.malware` and `puzzles.malware` to the same save envelope.
+No data migration. Uses the existing `fuckass_funzone:v1:<extensionInstallationId>` storage key and adds `toyPaces`, `puzzles` and `bests` entries for `malware`, `sugar` and `lockscreen` to the same save envelope. Tic Tac Treats saves move to version 2; older ones keep their streak and start the round on a fresh board.

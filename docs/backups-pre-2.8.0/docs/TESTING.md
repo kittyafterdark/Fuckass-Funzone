@@ -80,3 +80,12 @@ Run `npm run check` after source changes. The eight new rule suites cover chess 
 44. For each new game, pause, blur the window, switch games, reload, and re-enable the extension. Each board resumes paused with its score intact, Bubble Bloom keeps a shot that was in flight in the launcher, and Boop-a-Bun resumes with its clock and an empty garden. Typing arrows, digits, or Space in the chat input must not control the arcade.
 
 As before, the preview and automated mock do not establish a successful live Lumiverse install. Complete these checks in Lumiverse on desktop and a touch device before treating the contribution as release-ready.
+
+
+## Gambit replayability expansion
+
+Run `npm run check` for the combined twenty-one-game bundle. `node scripts/gambit-balance.mjs --seeds 6` runs a deterministic legal-play smoke test across all four starting decks; `--all-packs` includes Craft and Playing Card purchases. Its JSON includes the strongest run's reproducible action trace. The greedy policy favors growth and does not estimate player win rates.
+
+For visual/manual checks, serve `demo-gambit-qa.html`. Check the playable run plus isolated shop, normal pack, Mega pack, Craft, Playing Card, and victory examples at 382 px and 292 px cabinet widths. Inspect all five Mega options, claim one, reload, and claim a different option. With five Jokers, replace or decline an incoming Joker and continue the second paid choice. Inspect Glass risk before committing a card change. Open Run Info, card-effect help, and every Joker Collection page/filter. Check long score reports and scientific notation without covering controls.
+
+Live Lumiverse acceptance remains pending. Verify an existing version-one hand, score screen, paid pack, and finished win before starting a fresh run. Classic runs should retain their original six-round rules and paid options; fresh runs should offer four starting decks and the expanded campaign. Test resource and selection bosses, minimize/reopen, generation start/end/stop, blur, unload/re-enable, sound off, touch input, and other game saves/records. Finish Ante 8 and verify both Bank the Win and Continue Endless. Player feedback is still needed for difficulty, build diversity, economy, and individual Joker usefulness.

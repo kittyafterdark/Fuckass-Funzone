@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup } from '../dist/frontend.js';
 import { ChessGame } from '../src/chess.js';
@@ -17,6 +17,7 @@ class ElementMock {
   appendChild(node) { this.append(node); return node; }
   replaceChildren(...nodes) { this.children = nodes; this.textContent = ''; }
   setAttribute(key, value) { this.attributes.set(key, value); }
+  getAttribute(key) { return this.attributes.get(key) ?? null; }
   addEventListener(name, fn) { if (!this.listeners.has(name)) this.listeners.set(name, new Set()); this.listeners.get(name).add(fn); }
   removeEventListener(name, fn) { this.listeners.get(name)?.delete(fn); }
   dispatch(name, payload = {}) { for (const fn of [...(this.listeners.get(name) || [])]) fn({ type: name, target: this, preventDefault() {}, stopPropagation() {}, ...payload }); }
@@ -34,6 +35,7 @@ class ElementMock {
 const flatten = node => [node, ...node.children.flatMap(child => child instanceof ElementMock ? flatten(child) : [])];
 
 function withHost(initial, run) {
+  mock.timers.enable({ apis: ['setTimeout'] });
   const names = ['window', 'document', 'Image', 'HTMLElement', 'localStorage', 'requestAnimationFrame', 'cancelAnimationFrame'];
   const previous = Object.fromEntries(names.map(name => [name, globalThis[name]]));
   const key = 'fuckass_funzone:v1:sweets-integration';
@@ -61,7 +63,7 @@ function withHost(initial, run) {
   const nodes = () => flatten(placements.widget.root);
   const findClass = name => nodes().find(node => node.className.split(' ').includes(name));
   const api = {
-    audio, window, save: () => JSON.parse(cache.get(key)),
+    audio, window, save: () => { mock.timers.tick(250); return JSON.parse(cache.get(key)); },
     pick(id) {
       findClass('bb-phone-button').dispatch('click');
       const app = nodes().find(node => node.className === 'bb-app' && node.dataset.game === id);
@@ -82,6 +84,7 @@ function withHost(initial, run) {
   try { mount(); placements.action.click(); run(api); }
   finally {
     stop?.(); assert.equal(queued.size, 0, 'teardown cancels the animation loop');
+    mock.timers.reset();
     for (const [name, value] of Object.entries(previous)) { if (value === undefined) delete globalThis[name]; else globalThis[name] = value; }
   }
 }
