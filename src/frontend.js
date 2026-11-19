@@ -664,7 +664,9 @@ export function setup(ctx) {
   function refreshReaction(){
     if(!reactionBox)return;
     const item=reactions.current;
-    if(!settings.gabuReactions||!item||!shown||item.game!==activeMode){reactionBox.hidden=true;return;}
+    // While you hold a wafer, Gabu keeps his line to himself so it never covers the steady-hand meter.
+    const pulling=activeMode==='wafer'&&!!classicGames.wafer?.selected;
+    if(!settings.gabuReactions||!item||!shown||item.game!==activeMode||pulling){reactionBox.hidden=true;return;}
     reactionBox.hidden=false;
     if(reactionText.textContent!==item.line)reactionText.textContent=item.line;
     if(reactionPicture.dataset.art!==item.art){reactionPicture.src=ASSETS[item.art]||'';reactionPicture.dataset.art=item.art;}
