@@ -40,11 +40,20 @@ Open **Funzone OS** from the arcade drawer to launch any of the twenty-one games
 | **Boop-a-Bun** | Boop bunnies as they pop out of their burrows. Golden ones pay extra; skip Gabu's robot decoys. |
 | **Wobbly Wafers** | Take turns with Gabu pulling wafers from the tower. Tap a wafer, then tap again while the meter is green. Don't topple it. |
 | **Gacha Match** | Memorize the open capsules, then open two at a time to find every pair of matching charms. Choose a cozy, classic, or busy tray. |
+| **Gabu's Gambit** | Build a deck across eight Antes, combine five of 75 original Jokers, open eight booster variants, and continue into Endless. |
 | **Malware Mayhem** | Play a little virus loose in Gabu's mainframe: eat every byte of his data while his antivirus bots hunt you. Swipe, tap, or use the arrows. An exploit chip corrupts the bots so you can crash them back to their reboot dock. |
 
-Tetris, Solitaire, Froggy, and the nine newest games pause with **P** or the cabinet's main button. They also pause when the window loses focus; saved games resume paused. Solitaire supports keyboard play: arrows choose cards/piles, Enter selects, D draws, F moves the selected top card to its foundation, Z/U undoes, and Escape cancels selection. Undo history lasts for the current session; the board itself survives reloads.
+Tetris, Solitaire, Froggy, Gambit, Malware Mayhem, and the eight games added in upstream 2.7.0 pause with **P** or the cabinet's main button. They also pause when the window loses focus; saved games resume paused. Solitaire supports keyboard play: arrows choose cards/piles, Enter selects, D draws, F moves the selected top card to its foundation, Z/U undoes, and Escape cancels selection. Undo history lasts for the current session; the board itself survives reloads.
 
 Catmate Chess, Berry Drop, Tic Tac Treats, and Wobbly Wafers are played against Gabu, with a Chill, Normal, or Hard opponent in each game's drawer settings. Cake Tower, Bubble Bloom, Boop-a-Bun, and Malware Mayhem have Chill, Normal, and Chaos paces, and Gacha Match has three tray sizes. A new difficulty, pace, or board size applies to your next new game, never to the one in progress. Chess undo also lasts for the current session only.
+
+### Gabu's Gambit prototype
+
+Choose one of four starting decks, then beat 24 blinds across eight Antes. Combine five of 75 original Jokers with permanent hand levels, enhanced cards, retriggers, and deck crafting. Eight booster variants offer Jokers, hand levels, deck changes, or added cards; Mega packs let you claim two. Paid shop rerolls and interest create ways to build and save. Defeat the final boss to bank a win or continue in Endless. Run coins stay separate from arcade tickets; purchases and partial pack choices survive reload. Existing classic runs retain their original rules until they end.
+
+Use taps or keys **1–9 and 0** to select cards, **Space** to play or continue a scoring breakdown, **D** to discard, and **P** to pause. **R** sorts by rank, **S** by suit, and **I** opens Run Info, the full Joker Collection, and card-effect help. Arrow keys focus every visible action; **Enter** activates it and **Escape** closes details. The card-table layout uses four distinct suit colors, illustrated Joker cards, and a persistent Chips/Mult panel. See [the full rules and development notes](docs/GABUS-GAMBIT.md).
+
+Gambit joins the twenty games in upstream 2.7.0, including the merged Tetris, Solitaire, and Froggy contribution and the eight newest games. Its rules, artwork, and run state live in dedicated modules alongside the existing games.
 
 ### Visit the Prize Counter
 
@@ -76,3 +85,5 @@ https://github.com/kittyafterdark/Fuckass-Funzone
 No npm dependencies are needed. Run `npm run check` to rebuild `dist/frontend.js` and execute the rule and mock-host integration tests. The committed bundle is self-contained; edit `src/` and rebuild instead of editing `dist/` directly.
 
 For a playable mock-host preview, run `python -m http.server 8765 --bind 127.0.0.1` from the repository root and open [the local preview](http://127.0.0.1:8765/demo-classics-qa.html). This checks the bundled UI but does not replace testing in live Lumiverse; see [the acceptance checklist](docs/TESTING.md).
+
+For the Gambit mock-host preview, run `python -m http.server 8766 --bind 127.0.0.1` from the repository root and open [Gabu's Gambit locally](http://127.0.0.1:8766/demo-gambit-qa.html). Its selector includes isolated shop and booster examples. This preview also runs the combined twenty-one-game bundle; live Lumiverse and real touch-device checks remain pending.

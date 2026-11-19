@@ -45,8 +45,10 @@ test('each runtime sprite is embedded byte-for-byte in the production Spindle bu
   const b64=read(`assets/sprites/${name}.png`).toString('base64');
   assert.ok(bundle.includes(`"${name}":"data:image/png;base64,${b64}"`),`${name}: corrected PNG must be embedded exactly`);
  }
- const cover=read('assets/cover/jetpack-cover.png').toString('base64');
- assert.ok(bundle.includes(`"cover":"data:image/png;base64,${cover}"`),'approved cover remains bundled');
+ assert.doesNotMatch(bundle, /"(?:cover|icon)":"data:image\//);
+ const logo=read('assets/funzone/funzone-logo-runtime.png');
+ assert.deepEqual([logo.readUInt32BE(16),logo.readUInt32BE(20)],[530,139]);
+ assert.ok(bundle.includes(`"funzone_logo":"data:image/png;base64,${logo.toString('base64')}"`));
 });
 
 test('source sheet identities are pinned for fail-before-write rebuilds',()=>{

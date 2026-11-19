@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gabu's Gambit — expanded prototype</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#0b121a;color:#f7eedb;font:14px/1.5 system-ui,sans-serif;padding:24px}
+  header{max-width:1040px;margin:0 auto 20px}h1{font-size:26px;margin:0 0 6px}p{max-width:780px;color:#b4c5c8;margin:0 0 12px}
+  nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}nav button,select{padding:8px 12px;border-radius:8px;background:#20353f;color:#fff1d1;border:1px solid #557984}
+  .layout{display:flex;gap:28px;align-items:flex-start;justify-content:center}.mock-widget{width:382px;height:605px;flex-shrink:0;max-width:100%}
+  aside{width:330px;max-height:780px;overflow:auto}#error{color:#ff9fac;white-space:pre-wrap}
+  @media(max-width:760px){body{padding:12px}.layout{flex-direction:column;align-items:center}aside{width:100%;max-width:382px;max-height:400px}}
+</style>
+<header>
+  <h1>Gabu's Gambit</h1>
+  <p>A pocket poker roguelike. Build a hand, collect strange little advantages, and make the numbers behave badly.</p>
+  <nav><button id="open">Open arcade</button><label>Cabinet <select id="width"><option value="382">382 px</option><option value="292">292 px</option></select></label><label>Preview <select id="scene"><option value="run">Playable run</option><option value="shop">Shop example</option><option value="joker">Joker Pack example</option><option value="upgrade">Upgrade Pack example</option><option value="mega">Mega Joker Pack</option><option value="craft">Craft Pack</option><option value="standard">Playing Card Pack</option><option value="victory">Ante 8 victory</option></select></label></nav>
+  <p style="margin-top:12px">Select cards with taps or 1–9 and 0. Space plays, D discards, P pauses. R sorts ranks, S sorts suits, I opens Run Info and the 75-Joker collection. Arrows focus actions; Enter activates. This is a mock host, with live Lumiverse checks still pending.</p>
+  <p id="error" role="alert"></p>
+</header>
+<div class="layout"><main id="widget" class="mock-widget"></main><aside id="drawer"></aside></div>
+<script type="module">
+  const widget=document.querySelector('#widget'),drawer=document.querySelector('#drawer');
+  const scene=['run','shop','joker','upgrade','mega','craft','standard','victory'].includes(new URLSearchParams(location.search).get('scene'))?new URLSearchParams(location.search).get('scene'):'run';
+  document.querySelector('#scene').value=scene;
+  const installation='gambit-preview-'+scene,key='fuckass_funzone:v1:'+installation;
+  const handle=root=>({root,setVisible(visible){root.hidden=!visible},destroy(){root.replaceChildren()}});
+  let launch=()=>{};
+  window.addEventListener('error',event=>document.querySelector('#error').textContent=event.message);
+  try{
+    if(scene!=='run'){
+      // These isolated examples reach the shop through legal hands; the main run save is untouched.
+      const {GambitGame,GAMBIT_PACKS}=await import('./src/gambit.js');
+
+      let example;
+      for(let seed=1;seed<30;seed++){
+        const game=new GambitGame({seed});game.start();
+        while(game.status==='playing'&&game.phase==='play'){
+          let best=null,bestCards=[];
+          for(let mask=1;mask<(1<<game.hand.length);mask++){
+            const cards=game.hand.filter((_,index)=>mask&(1<<index));if(cards.length>5)continue;
+            game.selected=cards;const report=game.preview();
+            if(!best||report.total>best.total){best=report;bestCards=cards;}
+          }
+          game.selected=[];bestCards.forEach(id=>game.toggleCard(id));game.playHand();game.continueScore();
+        }
+        if(game.phase==='shop'){example=game;break;}
+      }
+      if(!example)throw Error('Could not prepare the shop example.');
+      if(scene==='joker')example.buy(2);if(scene==='upgrade')example.buy(3);
+      if(['mega','craft','standard'].includes(scene)){const pack=GAMBIT_PACKS.find(pack=>pack.kind===(scene==='mega'?'joker':scene)&&pack.size===(scene==='mega'?'mega':'normal'));example.shop[2]={kind:'pack',pack:pack.kind,size:pack.size,price:pack.price,sold:false};example.buy(2);}
+      if(scene==='victory'){example.round=24;example.roundScore=example.target;example.score=Math.max(example.score,example.roundScore);example.phase='victory';example.won=true;example.shop=[];}
+      localStorage.setItem(key,JSON.stringify({arcadeGame:'gambit',puzzles:{gambit:example.snapshot()}}));
+    }
+    const {setup}=await import('./dist/frontend.js?preview='+Date.now());
+    const teardown=setup({host:{extensionInstallationId:installation},events:{on(){return()=>{}}},ui:{
+      createFloatWidget(){return handle(widget)},registerDrawerTab(){return handle(drawer)},
+      registerInputBarAction(){return{onClick(fn){launch=fn;return()=>{launch=()=>{}}},destroy(){}}}
+    }});
+    document.querySelector('#open').onclick=()=>launch();
+    document.querySelector('#width').onchange=event=>widget.style.width=event.target.value+'px';
+    document.querySelector('#scene').onchange=event=>location.search='?scene='+event.target.value;
+    drawer.querySelector('.bb-drawer-os-button').click();widget.querySelector('[data-game="gambit"].bb-app').click();
+    window.addEventListener('pagehide',()=>teardown(),{once:true});
+  }catch(error){document.querySelector('#error').textContent=error.stack||String(error)}
+</script>
+</html>
