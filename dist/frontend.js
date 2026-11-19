@@ -7848,7 +7848,7 @@ function drawSugarSnap(canvas, game, { best = 0, reduced = false, time = 0 } = {
 
 return {drawSugarSnap};
 })();
-const {LOCK_PACES,LOCK_LETTERS,LOCK_WORDS,LOCK_CATEGORIES,lockPool,LockscreenGame}=(()=>{
+const {LOCK_PACES,LOCK_LETTERS,LOCK_WORDS,LOCK_LABELS,LOCK_CATEGORIES,lockPool,LockscreenGame}=(()=>{
 /** Gabu's Lockscreen: guess the passcode on Gabu's phone one letter at a time. Every wrong guess tightens its face scan,
  * and when the scan locks on you are locked out. Each passcode cracked adds to the run; one lockout ends it.
  * Pure rules: no DOM or Spindle APIs.
@@ -7856,21 +7856,31 @@ const {LOCK_PACES,LOCK_LETTERS,LOCK_WORDS,LOCK_CATEGORIES,lockPool,LockscreenGam
 // One export per line: the bundler lifts each exported name into the shared scope.
 const LOCK_PACES = Object.freeze(['chill', 'normal', 'hard']);
 const LOCK_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-// Original word lists. Letters only, so every one can be typed on any keyboard.
+// Original word lists, all everyday words people know. Letters only, so every one can be typed on any keyboard.
+// ROOM is ordinary stuff from Gabu's room; the screen shows it as GABU’S ROOM.
 const LOCK_WORDS = Object.freeze({
-  SWEETS: Object.freeze(['COOKIE', 'DONUT', 'TOFFEE', 'WAFER', 'CUPCAKE', 'MACARON', 'PUDDING', 'BROWNIE', 'MOCHI', 'SPRINKLES', 'CARAMEL', 'LOLLIPOP',
-    'MARSHMALLOW', 'CHURRO', 'GUMDROP', 'TRUFFLE', 'PRETZEL', 'CRUMBLE', 'MERINGUE', 'SHERBET', 'NOUGAT', 'FUDGE', 'PRALINE', 'TART', 'CANDY', 'BUTTERSCOTCH',
-    'SNICKERDOODLE', 'CHEESECAKE', 'HONEYCOMB', 'GINGERBREAD']),
-  ARCADE: Object.freeze(['JOYSTICK', 'TOKEN', 'JACKPOT', 'HIGHSCORE', 'COMBO', 'PINBALL', 'CABINET', 'PIXEL', 'BOSSFIGHT', 'RESPAWN', 'CONTROLLER', 'PLAYER',
-    'LEVEL', 'BONUS', 'POWERUP', 'TICKET', 'CLAW', 'SPEEDRUN', 'CHECKPOINT', 'GLITCH', 'ROUND', 'CREDITS', 'PRIZE', 'STREAK', 'LEADERBOARD', 'HITBOX',
-    'CUTSCENE', 'MINIGAME', 'GAMEPAD', 'QUEST']),
-  CYBER: Object.freeze(['FIREWALL', 'PASSWORD', 'MAINFRAME', 'ROUTER', 'BANDWIDTH', 'PROTOCOL', 'ENCRYPTION', 'MALWARE', 'KERNEL', 'TERMINAL', 'SERVER',
-    'CIRCUIT', 'SENSOR', 'BINARY', 'PROCESSOR', 'DOWNLOAD', 'ANTIVIRUS', 'CACHE', 'DATABASE', 'OVERCLOCK', 'SYNTAX', 'BACKDOOR', 'WIRELESS', 'HOLOGRAM',
-    'UPLINK', 'ALGORITHM', 'BOOT', 'CODE', 'LAPTOP', 'WIFI']),
-  GABU: Object.freeze(['JETPACK', 'CYBORG', 'HEADPHONES', 'VISOR', 'SARCASM', 'TELEMETRY', 'OPTIMIZE', 'OVERRIDE', 'DIAGNOSTIC', 'CALIBRATE', 'ROBOTICS',
-    'UPGRADE', 'TSUNDERE', 'HETEROCHROMIA', 'PROSTHETIC', 'IMPLANT', 'SNACKS', 'GREMLIN', 'HOODIE', 'GAMER', 'SPITE', 'DRAMA', 'SASS', 'NAPS', 'ENERGY',
-    'STICKERS', 'BLUSH', 'GRUMPY', 'MEMES', 'CHAOS']),
+  SWEETS: Object.freeze([
+    'COOKIE', 'DONUT', 'TOFFEE', 'WAFER', 'CUPCAKE', 'PUDDING', 'BROWNIE', 'SPRINKLES', 'CARAMEL', 'LOLLIPOP', 'MARSHMALLOW', 'CHURRO', 'GUMDROP',
+    'TRUFFLE', 'PRETZEL', 'CRUMBLE', 'FUDGE', 'TART', 'CANDY', 'BUTTERSCOTCH', 'CHEESECAKE', 'HONEYCOMB', 'GINGERBREAD', 'PANCAKE', 'WAFFLE',
+    'MUFFIN', 'CHOCOLATE', 'POPCORN', 'JELLYBEAN', 'MILKSHAKE', 'SUNDAE', 'CROISSANT', 'CUSTARD']),
+  GAMES: Object.freeze([
+    'JOYSTICK', 'TOKEN', 'JACKPOT', 'COMBO', 'PINBALL', 'PIXEL', 'RESPAWN', 'CONTROLLER', 'PLAYER', 'LEVEL', 'BONUS', 'TICKET', 'CHECKPOINT',
+    'GLITCH', 'CREDITS', 'PRIZE', 'STREAK', 'LEADERBOARD', 'GAMEPAD', 'QUEST', 'PUZZLE', 'DICE', 'CARDS', 'CHESS', 'TOURNAMENT', 'CHAMPION',
+    'VICTORY', 'ARCADE', 'CHECKERS', 'DOMINOES', 'TREASURE', 'DUNGEON', 'DRAGON', 'KNIGHT', 'WIZARD']),
+  TECH: Object.freeze([
+    'PASSWORD', 'FIREWALL', 'ROUTER', 'MALWARE', 'SERVER', 'CIRCUIT', 'SENSOR', 'DOWNLOAD', 'ANTIVIRUS', 'DATABASE', 'WIRELESS', 'HOLOGRAM',
+    'LAPTOP', 'WIFI', 'KEYBOARD', 'MOUSE', 'MONITOR', 'SPEAKER', 'CHARGER', 'BATTERY', 'BLUETOOTH', 'EMAIL', 'WEBSITE', 'BROWSER', 'ROBOT',
+    'COMPUTER', 'TABLET', 'SMARTPHONE', 'CAMERA', 'PRINTER', 'SCREEN', 'HEADSET', 'MICROPHONE', 'REMOTE', 'ANTENNA']),
+  ANIMALS: Object.freeze([
+    'BUNNY', 'KITTEN', 'PUPPY', 'HAMSTER', 'PENGUIN', 'DOLPHIN', 'OCTOPUS', 'GIRAFFE', 'ELEPHANT', 'KOALA', 'PANDA', 'RACCOON', 'HEDGEHOG',
+    'FLAMINGO', 'SQUIRREL', 'TURTLE', 'BUTTERFLY', 'CROCODILE', 'KANGAROO', 'ZEBRA', 'MONKEY', 'PARROT', 'OTTER', 'WOLF', 'TIGER', 'LION', 'BEAR',
+    'FROG', 'DUCK', 'SHARK', 'WHALE', 'JELLYFISH', 'LADYBUG', 'CHAMELEON', 'GORILLA']),
+  ROOM: Object.freeze([
+    'HEADPHONES', 'HOODIE', 'JETPACK', 'SNACKS', 'STICKERS', 'PILLOW', 'BLANKET', 'POSTER', 'BEANBAG', 'BACKPACK', 'SNEAKERS', 'LAMP', 'PLUSHIE',
+    'MIRROR', 'DESK', 'CHAIR', 'GUITAR', 'SKATEBOARD', 'CALENDAR', 'WINDOW', 'CURTAINS', 'CARPET', 'BOOKSHELF', 'NOTEBOOK', 'CONSOLE', 'CANDLE',
+    'SLIPPERS', 'PAJAMAS', 'TOOLBOX', 'SCREWDRIVER', 'HAMMOCK', 'PLANT']),
 });
+const LOCK_LABELS = Object.freeze({ SWEETS: 'SWEETS', GAMES: 'GAMES', TECH: 'TECH', ANIMALS: 'ANIMALS', ROOM: 'GABU’S ROOM' });
 const LOCK_CATEGORIES = Object.freeze(Object.keys(LOCK_WORDS));
 // Pace sets how many wrong guesses the face scan needs to lock on, which word lengths come up, and whether the category is shown.
 const PACE = Object.freeze({
@@ -7986,7 +7996,7 @@ class LockscreenGame {
   }
 }
 
-return {LOCK_PACES,LOCK_LETTERS,LOCK_WORDS,LOCK_CATEGORIES,lockPool,LockscreenGame};
+return {LOCK_PACES,LOCK_LETTERS,LOCK_WORDS,LOCK_LABELS,LOCK_CATEGORIES,lockPool,LockscreenGame};
 })();
 const {lockKeyAt,drawLockscreen}=(()=>{
 /** Gabu's Lockscreen canvas: his phone's face scan above the passcode prompt, with an on-screen keyboard that stays clear of his line. */
@@ -8065,7 +8075,7 @@ function drawLockscreen(canvas, game, { best = 0, cursor = false, reduced = fals
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   rounded(ctx, 20, 45, 320, 1, 0, '#4a3546');
   const max = game.rules.misses, misses = Math.min(game.misses, max), caught = game.result === 'caught';
-  drawTxt(ctx, game.rules.hint || game.phase === 'over' ? game.category : 'CATEGORY HIDDEN', 20, 66, 10, '#8fe8ff');
+  drawTxt(ctx, game.rules.hint || game.phase === 'over' ? LOCK_LABELS[game.category] : 'CATEGORY HIDDEN', 20, 66, 10, '#8fe8ff');
   drawTxt(ctx, `CRACKED ${game.cracked}  ·  ${PACE_NAMES[game.pace] || 'NORMAL'}`, 340, 66, 9, '#cfc4ea', 'right');
   // Gabu's phone. Its face scan tightens with every wrong guess.
   faceScan(ctx, misses, max, caught, reduced ? null : game.flash);

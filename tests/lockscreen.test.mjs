@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LockscreenGame, LOCK_PACES, LOCK_WORDS, LOCK_CATEGORIES, LOCK_LETTERS, lockPool } from '../src/lockscreen.js';
+import { LockscreenGame, LOCK_PACES, LOCK_WORDS, LOCK_CATEGORIES, LOCK_LETTERS, LOCK_LABELS, lockPool } from '../src/lockscreen.js';
 import { drawLockscreen, lockKeyAt } from '../src/lockscreen-render.js';
 
 const playing = (options = {}) => { const g = new LockscreenGame({ random: () => .5, ...options }); g.start(); return g; };
@@ -9,7 +9,7 @@ const wrongLetters = g => [...LOCK_LETTERS].filter(ch => !g.word.includes(ch));
 test('Lockscreen words: letters only, no repeats, and every difficulty has plenty in range', () => {
   const all = Object.values(LOCK_WORDS).flat();
   assert.ok(all.every(word => /^[A-Z]{4,13}$/.test(word))); assert.equal(new Set(all).size, all.length, 'no word appears twice');
-  assert.deepEqual(LOCK_CATEGORIES, ['SWEETS', 'ARCADE', 'CYBER', 'GABU']);
+  assert.deepEqual(LOCK_CATEGORIES, ['SWEETS', 'GAMES', 'TECH', 'ANIMALS', 'ROOM']);
   for (const pace of LOCK_PACES) {
     const pool = lockPool(pace); assert.ok(pool.length >= 40, `${pace} has enough words`);
     const lengths = pool.map(([cat, i]) => LOCK_WORDS[cat][i].length);
@@ -86,5 +86,5 @@ test('the Lockscreen renderer draws every state and the keys hit-test where they
   for (const ch of wrongLetters(g)) g.guess(ch); drawLockscreen(canvas, g, { reduced: true });
   for (const label of ['GABU’S LOCKSCREEN', 'ACCESS GRANTED', 'PAUSED', 'LOCKED OUT']) assert.ok(text.includes(label), label);
   const hard = new LockscreenGame({ pace: 'hard', random: () => .5 }); hard.start(); text.length = 0; drawLockscreen(canvas, hard, {});
-  assert.ok(text.includes('CATEGORY HIDDEN') && !text.includes(hard.category), 'Hard keeps the category secret until the end');
+  assert.ok(text.includes('CATEGORY HIDDEN') && !text.includes(LOCK_LABELS[hard.category]), 'Hard keeps the category secret until the end');
 });

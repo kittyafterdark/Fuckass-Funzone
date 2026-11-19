@@ -1,5 +1,5 @@
 /** Gabu's Lockscreen canvas: his phone's face scan above the passcode prompt, with an on-screen keyboard that stays clear of his line. */
-import { LOCK_LETTERS } from './lockscreen.js';
+import { LOCK_LETTERS, LOCK_LABELS } from './lockscreen.js';
 
 const W = 360, H = 452, KEY_W = 33, KEY_H = 30, GAP = 4, ROW_GAP = 5, KEYS_X = (W - (9 * KEY_W + 8 * GAP)) / 2, KEYS_Y = 270;
 const rounded = (ctx, x, y, w, h, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
@@ -75,7 +75,7 @@ export function drawLockscreen(canvas, game, { best = 0, cursor = false, reduced
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   rounded(ctx, 20, 45, 320, 1, 0, '#4a3546');
   const max = game.rules.misses, misses = Math.min(game.misses, max), caught = game.result === 'caught';
-  drawTxt(ctx, game.rules.hint || game.phase === 'over' ? game.category : 'CATEGORY HIDDEN', 20, 66, 10, '#8fe8ff');
+  drawTxt(ctx, game.rules.hint || game.phase === 'over' ? LOCK_LABELS[game.category] : 'CATEGORY HIDDEN', 20, 66, 10, '#8fe8ff');
   drawTxt(ctx, `CRACKED ${game.cracked}  ·  ${PACE_NAMES[game.pace] || 'NORMAL'}`, 340, 66, 9, '#cfc4ea', 'right');
   // Gabu's phone. Its face scan tightens with every wrong guess.
   faceScan(ctx, misses, max, caught, reduced ? null : game.flash);
