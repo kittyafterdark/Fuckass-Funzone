@@ -98,7 +98,8 @@ export function drawBubbleBloom(canvas, game, { best = 0 } = {}) {
   if (game.status === 'playing' && !game.shot) aimGuide(ctx, game);
   if (game.shot) drawBubble(ctx, game.shot.kind, game.shot.x, game.shot.y);
   launcher(ctx, game);
-  rounded(ctx, 30, 400, 66, 34, 10, '#3f2f60'); drawTxt(ctx, 'NEXT', 38, 421, 8, '#cfc4ea'); drawBubble(ctx, game.next, 79, 417, 11);
+  // The launcher and the next bubble sit above the footer, so Gabu's line can cover only the hints, as in Kitty's games.
+  rounded(ctx, 40, 340, 66, 32, 10, '#3f2f60'); drawTxt(ctx, 'NEXT', 48, 360, 8, '#cfc4ea'); drawBubble(ctx, game.next, 89, 356, 10);
   drawTxt(ctx, 'DRAG OR ARROWS TO AIM', 326, 413, 8, '#bfb3d8', 'right'); drawTxt(ctx, 'RELEASE / SPACE · C SWAPS', 326, 427, 8, '#bfb3d8', 'right');
   if (game.status === 'dead') overlay(ctx, 'BUBBLE OVERFLOW', `Level ${game.level} · ${game.score} points`, 'PRESS PLAY TO POP AGAIN', '#ff8fb8');
   else if (game.status === 'paused') overlay(ctx, 'PAUSED', 'The bubbles are holding their breath.', 'PRESS PLAY TO RESUME', '#b8a7ff');

@@ -80,7 +80,7 @@ test('Catmate saves restore paused, and impossible positions are rejected', () =
 });
 
 test('Catmate renderer hit-tests squares and draws every state without throwing', () => {
-  assert.equal(chessSquareAt(21, 63), 0); assert.equal(chessSquareAt(339, 381), 63); assert.equal(chessSquareAt(10, 63), -1);
+  assert.equal(chessSquareAt(21, 63), 0); assert.equal(chessSquareAt(339, 375), 63); assert.equal(chessSquareAt(10, 63), -1);
   const calls = [];
   const ctx = new Proxy({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }) }, {
     get(target, name) { return name in target ? target[name] : (...args) => { if (name === 'fillText') calls.push(args[0]); }; },

@@ -3,17 +3,17 @@
  */
 export const BUBBLE_KINDS = Object.freeze(['heart', 'star', 'fish', 'drop', 'moon', 'flower']);
 // One export per line: the bundler lifts each exported name into the shared scope.
-export const BUBBLE_R = 16;
+export const BUBBLE_R = 14;
 export const BUBBLE_COLS = 10;
 export const BUBBLE_ROWS = 12;
 export const BUBBLE_DEATH_ROW = 11;
-export const BUBBLE_LEFT = 20;
-export const BUBBLE_TOP = 72;
+export const BUBBLE_LEFT = 40;
+export const BUBBLE_TOP = 60;
 export const BUBBLE_RH = BUBBLE_R * Math.sqrt(3);
 export const LAUNCH_X = 180;
-export const LAUNCH_Y = 414;
+export const LAUNCH_Y = 356;
 export const BUBBLE_PACES = Object.freeze(['chill', 'normal', 'chaos']);
-const SPEED = 660, MIN_AIM = .2, MAX_AIM = Math.PI - .2;
+const SPEED = 578, MIN_AIM = .2, MAX_AIM = Math.PI - .2;
 // Pace changes real board colors and how many misses the ceiling forgives.
 const PACE = Object.freeze({ chill: { kinds: -1, shots: 2 }, normal: { kinds: 0, shots: 0 }, chaos: { kinds: 1, shots: -1 } });
 const pace = value => BUBBLE_PACES.includes(value) ? value : 'normal';

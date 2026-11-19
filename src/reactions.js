@@ -976,6 +976,47 @@ const SAYINGS=Object.freeze({
    "The firewall wins! Every byte you missed stays MINE!",
    "DONE! You infected the wrong cyborg. Iconic."
   ]
+ },
+ sugar:{
+  new_best:[
+   "New sugar record. Not impressed. [Logging: slightly impressed.]",
+   "Best batch yet. Who taught you to be that gentle with your hands? Asking.",
+   "Record carved. My sweet tooth and my pride are both in critical condition.",
+   "New best?! I pressed those shapes to break you, not to watch you thrive."
+  ],
+  free:[
+   "Popped it clean. Fine. You have steady hands. Don't make it weird.",
+   "It came out whole?! I pressed that line extra deep just for you.",
+   "Clean carve. [Stability report: annoyingly perfect.] Next one's meaner.",
+   "Out in one piece. Unlike my faith in you, which was in several.",
+   "Look at you, being gentle for once. Your exes would never believe it."
+  ],
+  snap:[
+   "SNAP! Right through the middle. Gorgeous. Truly. Eat your failure.",
+   "It broke. You went at that candy like it owed you money.",
+   "Crack detected. [Diagnosis: zero patience, heavy hands.]",
+   "Snapped. Slow down, speedrunner, it's toffee, not a boss fight.",
+   "Shattered. That's what you get for rushing. Story of your love life."
+  ],
+  timeout:[
+   "Time. The toffee set while you admired your own technique.",
+   "Clock's out. I've watched glaciers carve faster than that.",
+   "Too slow! [Logging: user mistook a timer for a suggestion.]",
+   "Buzzer! You were gentle, sure. Gentle and absolutely glacial."
+  ],
+  crack:[
+   "Hey. HEY. It's cracking. Ease off before you embarrass us both.",
+   "Stability warning! Gentle fingers, babe. Gentle.",
+   "That's a crack. [Concern marker: elevated. For the candy. Not you.]",
+   "Easy! You're pressing like it's a crosswalk button.",
+   "Crack spreading. Breathe. Or don't, but stop stabbing my candy."
+  ],
+  death:[
+   "Out of candy. I'd make more, but watching you suffer is free.",
+   "Last one snapped. My sugar budget can't survive another of your batches.",
+   "Game over. [Error log: three candies, zero survivors.]",
+   "That's the batch. Go wash your hands, you're sticky with failure."
+  ]
  }
 });
 const MOODS=Object.freeze({idle:'gabu_smug',smug:'gabu_smug',annoyed:'gabu_annoyed',hype:'gabu_hype',panic:'gabu_panic',dizzy:'gabu_dizzy',sleepy:'gabu_sleepy',shock:'gabu_shock',magnate:'gabu_magnate'});
@@ -1044,6 +1085,11 @@ export class ReactionDirector {
   else if(event==='exploit'){mood='shock';priority=3;}
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
+  // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
+  else if(event==='free'){mood='hype';priority=4;}
+  else if(event==='snap'){mood='smug';priority=4;}
+  else if(event==='timeout'){mood='sleepy';priority=3;}
+  else if(event==='crack'){mood='panic';priority=2;}
   else if(event==='special_created'){mood='hype';priority=3;}
   else if(event==='no_moves'){mood='shock';priority=6;duration=4.2;}
   else if(event==='cascade'||event==='win'||event==='new_best'){mood='hype';priority=5;duration=3.8;}

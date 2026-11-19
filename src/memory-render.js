@@ -1,7 +1,7 @@
 /** Gacha Match canvas: a toy-shop tray of gacha capsules that pop open to show one of ten hand-drawn charms. */
 import { CHARMS } from './memory.js';
 
-const W = 360, H = 452, TOP = 78, BOTTOM = 384;
+const W = 360, H = 452, TOP = 76, BOTTOM = 376;
 const rounded = (ctx, x, y, w, h, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
 const drawTxt = (ctx, t, x, y, size, color = '#fbf3ef', align = 'left') => {
   ctx.font = `800 ${size}px ui-sans-serif,system-ui,sans-serif`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'alphabetic'; ctx.fillText(String(t), x, y); ctx.textAlign = 'left';

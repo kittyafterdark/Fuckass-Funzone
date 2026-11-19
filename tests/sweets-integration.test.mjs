@@ -2,6 +2,7 @@ import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup } from '../dist/frontend.js';
 import { ChessGame } from '../src/chess.js';
+import { sugarPath } from '../src/sugar.js';
 
 class ElementMock {
   constructor(tag = 'div') {
@@ -216,5 +217,24 @@ test('bundled Malware Mayhem plays by keys and swipes, and the run survives relo
     assert.equal(h.drawerSelect('Malware Mayhem pace').value, 'normal');
     const score = h.save().puzzles.malware.score; h.reload(); h.pick('malware');
     assert.equal(h.save().puzzles.malware.score, score, 'the run comes back after a reload');
+  });
+});
+
+test('bundled Sugar Snap carves by finger and by key, keeps its difficulty, and the run survives reload', () => {
+  withHost({}, h => {
+    h.pick('sugar'); h.key('Space'); h.frames(2);
+    const canvas = h.findClass('bb-canvas'), heart = sugarPath('heart');
+    // A steady finger along the pressed line: four outline samples (12 px) per 120 ms host frame.
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 4, clientX: heart[0].x, clientY: heart[0].y });
+    for (let i = 1; i <= heart.length; i++) { const p = heart[i % heart.length]; canvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 4, clientX: p.x, clientY: p.y }); if (i % 4 === 0) h.frames(1); }
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 4, clientX: heart[0].x, clientY: heart[0].y });
+    const freed = h.save().puzzles.sugar;
+    assert.equal(freed.result, 'free', 'tracing the heart frees it'); assert.ok(freed.score > 100); assert.equal(freed.status, 'paused', 'saves store a running game as paused');
+    h.key('Space'); h.key('KeyP'); assert.equal(h.save().puzzles.sugar.round, 1, 'Space brings the next shape');
+    h.key('KeyP'); for (let i = 0; i < 12; i++) { h.key('Space'); h.frames(2); }
+    h.key('KeyP'); assert.ok(h.save().puzzles.sugar.cut.includes('1'), 'Space carves along the line'); h.key('KeyP');
+    assert.equal(h.drawerSelect('Sugar Snap difficulty').value, 'normal');
+    const saved = h.save().puzzles.sugar; h.reload(); h.pick('sugar');
+    assert.equal(h.save().puzzles.sugar.cut, saved.cut, 'the carved line comes back after a reload');
   });
 });

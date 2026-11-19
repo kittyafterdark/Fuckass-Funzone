@@ -3,7 +3,7 @@
  */
 import { kingSquare, inCheck } from './chess.js';
 
-const W = 360, H = 452, X = 20, Y = 62, CELL = 40;
+const W = 360, H = 452, X = 20, Y = 56, CELL = 40;
 const SIDES = Object.freeze({
   w: { body: '#fff6ec', shade: '#f3d9c9', ink: '#6b4558', ear: '#ffc2d6', eye: '#3a2638', cushion: '#f7c6d8', cushionEdge: '#c77d9d' },
   b: { body: '#4b3668', shade: '#382852', ink: '#1d1329', ear: '#c78bd8', cushion: '#2a1d3d', cushionEdge: '#8f7bd6' },

@@ -47,13 +47,14 @@ const classicModules=[
   ['wafer', 'WobblyWafersGame'],['wafer-render', 'drawWobblyWafers, waferAt'],
   ['memory', 'GachaMatchGame, MEMORY_SIZES'],['memory-render', 'drawGachaMatch, capsuleAt'],
   ['malware', 'MalwareMayhemGame, MALWARE_PACES'],['malware-render', 'drawMalwareMayhem, malwareSwipe, malwareDrag'],
+  ['sugar', 'SugarSnapGame, SUGAR_PACES'],['sugar-render', 'drawSugarSnap'],
 ];
 // Isolate each new game's helpers while making its named exports available to its renderer.
 function bundleClassicModule(name){
   const source=read(`src/${name}.js`);
   const publicNames=[...source.matchAll(/^export\s+(?:const|let|class|function)\s+(\w+)/gm)].map(match=>match[1]);
   if(!publicNames.length)throw Error(`No public exports in ${name}`);
-  const body=source.replace(/^import\s+\{[^}]*\}\s+from\s+['"]\.\/(?:tetris|solitaire|froggy|chess|connect|tictac|cake|bubble|boop|wafer|memory|malware)\.js['"];?\s*$/gm,'').replace(/^export\s+/gm,'');
+  const body=source.replace(/^import\s+\{[^}]*\}\s+from\s+['"]\.\/(?:tetris|solitaire|froggy|chess|connect|tictac|cake|bubble|boop|wafer|memory|malware|sugar)\.js['"];?\s*$/gm,'').replace(/^export\s+/gm,'');
   return `const {${publicNames.join(',')}}=(()=>{\n${body}\nreturn {${publicNames.join(',')}};\n})();`;
 }
 let ui=read('src/frontend.js');
@@ -96,7 +97,7 @@ const assetPaths=Object.fromEntries([
   ...['smug','annoyed','hype','panic','dizzy','sleepy','shock'].map(k=>[`gabu_${k}`,`assets/match3/gabu-${k}.png`]),
   ['gabu_magnate','assets/plinko/gabu-monocle.png'],['gabu_peek','assets/plinko/gabu-peek.png'],['plinko_chip','assets/plinko/cat-chip.png'],['plinko_app','assets/plinko/plinko-app.png'],
 ]);
-const svgPaths={...Object.fromEntries(['simon','duck','slots','tetris','solitaire','froggy','chess','berry','treats','cake','bubble','boop','wafer','memory','gambit','malware'].map(k=>[`${k}_app`,`assets/funzone/${k}-app.svg`])),...Object.fromEntries(['cat','heart','star','fish','cookie','gem','rocket','bomb'].map(k=>[`match_vec_${k}`,`assets/match3/vector/${k}.svg`])),match_vec_hint:'assets/match3/vector/hint.svg',plinko_crest:'assets/plinko/cat-crest.svg'};
+const svgPaths={...Object.fromEntries(['simon','duck','slots','tetris','solitaire','froggy','chess','berry','treats','cake','bubble','boop','wafer','memory','gambit','malware','sugar'].map(k=>[`${k}_app`,`assets/funzone/${k}-app.svg`])),...Object.fromEntries(['cat','heart','star','fish','cookie','gem','rocket','bomb'].map(k=>[`match_vec_${k}`,`assets/match3/vector/${k}.svg`])),match_vec_hint:'assets/match3/vector/hint.svg',plinko_crest:'assets/plinko/cat-crest.svg'};
 const assets={};
 for(const [key,p] of Object.entries(assetPaths)) {
   const contents=fs.readFileSync(path.join(root,p));
