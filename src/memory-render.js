@@ -69,26 +69,27 @@ function drawCapsule(ctx, cx, cy, r, lid, open, charm, matched) {
 export function drawGachaMatch(canvas, game, { best = 0, reduced = false, cursor = true } = {}) {
   if (!canvas?.getContext) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
   ctx.save(); ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
-  const shop = ctx.createLinearGradient(0, 0, 0, H); shop.addColorStop(0, '#c9f0ec'); shop.addColorStop(1, '#a9dcf2'); ctx.fillStyle = shop; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#ffffff40'; for (let i = 0; i < 18; i++) { ctx.beginPath(); ctx.arc((i * 71 + 15) % W, 70 + (i * 97 + 11) % 330, 2 + i % 3, 0, Math.PI * 2); ctx.fill(); }
+  // A dark gacha cabinet: the capsules are the only bright things on the tray.
+  const cabinet = ctx.createLinearGradient(0, 0, 0, H); cabinet.addColorStop(0, '#1e1430'); cabinet.addColorStop(1, '#0e111c'); ctx.fillStyle = cabinet; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 18; i++) { ctx.fillStyle = i % 2 ? '#ff78b520' : '#38bdf820'; ctx.fillRect((i * 71 + 15) % W, 70 + (i * 97 + 11) % 330, 2, 2); }
   rounded(ctx, 0, 0, W, 48, 0, '#2c1a33');
   drawCapsule(ctx, 26, 25, 10, LIDS[0], 0, 0, false);
   drawTxt(ctx, 'GACHA MATCH', 42, 31, 12, '#ffe6ef');
   drawTxt(ctx, `SCORE ${game.score}`, 214, 31, 11, '#fdfaf7', 'center');
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   const time = Math.floor(game.elapsed);
-  drawTxt(ctx, `PAIRS ${game.matches}/${game.cards.length / 2}  ·  MISSES ${game.misses}  ·  ${Math.floor(time / 60)}:${String(time % 60).padStart(2, '0')}`, 20, 66, 10, '#2f5b66');
-  drawTxt(ctx, game.streak >= 2 ? `STREAK ×${game.streak}` : SIZE_NAMES[game.size], 340, 66, 10, game.streak >= 2 ? '#c93a6c' : '#2f5b66', 'right');
+  drawTxt(ctx, `PAIRS ${game.matches}/${game.cards.length / 2}  ·  MISSES ${game.misses}  ·  ${Math.floor(time / 60)}:${String(time % 60).padStart(2, '0')}`, 20, 66, 10, '#e2d4ef');
+  drawTxt(ctx, game.streak >= 2 ? `STREAK ×${game.streak}` : SIZE_NAMES[game.size], 340, 66, 10, game.streak >= 2 ? '#ff8fb8' : '#e2d4ef', 'right');
   const { gap, cw, ch, x0, y0 } = memoryLayout(game.cols, game.rows), r = Math.min(cw, ch) * .4;
   game.cards.forEach((card, i) => {
     const x = x0 + (i % game.cols) * (cw + gap), y = y0 + Math.floor(i / game.cols) * (ch + gap), open = reduced ? (card.up || card.matched || game.preview > 0 ? 1 : 0) : card.turn;
     // Found pairs fade back so the capsules still in play stand out; the ones you just opened glow.
     if (card.matched) ctx.globalAlpha = .38;
-    rounded(ctx, x, y, cw, ch, 14, card.up && !card.matched ? '#ffffffcc' : '#ffffff55');
-    if (card.up && !card.matched) { ctx.strokeStyle = '#ff7fae'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x, y, cw, ch, 14); ctx.stroke(); }
+    rounded(ctx, x, y, cw, ch, 14, card.up && !card.matched ? '#ffffff26' : '#ffffff0d');
+    ctx.strokeStyle = card.up && !card.matched ? '#ff7fae' : '#ffffff1a'; ctx.lineWidth = card.up && !card.matched ? 3 : 1; ctx.beginPath(); ctx.roundRect(x, y, cw, ch, 14); ctx.stroke();
     drawCapsule(ctx, x + cw / 2, y + ch / 2 + r * .15, r, LIDS[i % LIDS.length], open, CHARMS[card.kind], card.matched);
     ctx.globalAlpha = 1;
-    if (cursor && game.status === 'playing' && i === game.cursor) { ctx.strokeStyle = '#2f5b66'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.roundRect(x - 2, y - 2, cw + 4, ch + 4, 15); ctx.stroke(); ctx.setLineDash([]); }
+    if (cursor && game.status === 'playing' && i === game.cursor) { ctx.strokeStyle = '#ffffffb3'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.roundRect(x - 2, y - 2, cw + 4, ch + 4, 15); ctx.stroke(); ctx.setLineDash([]); }
   });
   rounded(ctx, 0, 412, W, 40, 0, '#2c1a33');
   const memorizing = game.status === 'playing' && game.preview > 0;

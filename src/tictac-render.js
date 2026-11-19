@@ -25,7 +25,17 @@ export function drawPockyMark(ctx, cx, cy, size, alpha = 1) {
   }
   ctx.restore();
 }
-/** Gabu's mark: a glazed donut with sprinkles and a cyan glint where the right eye would be. */
+// Gabu's eyes as Kitty draws them on the Snake head: his right eye amber, his left eye blue, so facing you the amber one is on your left.
+function gabuEye(ctx, x, y, r, iris, ring, pupil) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, r * .7, 0, Math.PI * 2); ctx.fillStyle = iris; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = r * .2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r * .3, 0, Math.PI * 2); ctx.fillStyle = pupil; ctx.fill();
+  ctx.beginPath(); ctx.arc(x - r * .28, y - r * .3, r * .16, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+}
+function gabuEyes(ctx, x, y, gap, r) {
+  ctx.save(); gabuEye(ctx, x - gap, y, r, '#fbbf24', '#e58f10', '#451a03'); gabuEye(ctx, x + gap, y, r, '#38bdf8', '#1d97d8', '#082f49'); ctx.restore();
+}
+/** Gabu's mark: a glazed donut with sprinkles, peeking at you with his amber and blue eyes. */
 export function drawDonutMark(ctx, cx, cy, size, alpha = 1) {
   ctx.save(); ctx.globalAlpha = alpha; ctx.translate(cx, cy); ctx.scale(size / 60, size / 60);
   ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI * 2); ctx.arc(0, 0, 8, 0, Math.PI * 2, true); ctx.fillStyle = '#e2a25f'; ctx.fill('evenodd');
@@ -38,7 +48,7 @@ export function drawDonutMark(ctx, cx, cy, size, alpha = 1) {
     const a = i * .53 + .2, r = 13 + (i % 3) * 2.6;
     ctx.save(); ctx.translate(Math.cos(a) * r, Math.sin(a) * r); ctx.rotate(a * 2.3); ctx.fillStyle = colors[i % 4]; ctx.beginPath(); ctx.roundRect(-2.4, -.9, 4.8, 1.8, .9); ctx.fill(); ctx.restore();
   }
-  ctx.save(); ctx.shadowColor = '#6ff3ff'; ctx.shadowBlur = 6; ctx.fillStyle = '#6ff3ff'; ctx.beginPath(); ctx.arc(12, -12, 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  gabuEyes(ctx, 0, -15, 6, 3.6);
   ctx.restore();
 }
 const LEVEL_NAMES = Object.freeze({ chill: 'CHILL GABU', normal: 'NORMAL GABU', hard: 'HARD GABU' });
@@ -56,13 +66,13 @@ export function drawTicTacTreats(canvas, game, { best = 0, images = {}, reduced 
   drawTxt(ctx, `ROUND ${game.round}  ·  WINS ${game.wins}  ·  DRAWS ${game.draws}`, 22, 66, 10, '#e2c9da');
   drawTxt(ctx, LEVEL_NAMES[game.level] || 'GABU', 338, 66, 10, '#e2c9da', 'right');
   // Quilted picnic cushion with stitched dividers.
-  rounded(ctx, BX - 14, BY - 14, CELL * 3 + 28, CELL * 3 + 28, 26, '#c77d9d');
-  rounded(ctx, BX - 11, BY - 11, CELL * 3 + 22, CELL * 3 + 22, 23, '#ffe3ee');
+  rounded(ctx, BX - 14, BY - 14, CELL * 3 + 28, CELL * 3 + 28, 26, '#5f4277');
+  rounded(ctx, BX - 11, BY - 11, CELL * 3 + 22, CELL * 3 + 22, 23, '#1a1528');
   for (let i = 0; i < 9; i++) {
     const x = BX + (i % 3) * CELL, y = BY + Math.floor(i / 3) * CELL;
-    rounded(ctx, x + 5, y + 5, CELL - 10, CELL - 10, 16, (i + Math.floor(i / 3)) % 2 ? '#ffd0e1' : '#ffe9f1');
+    rounded(ctx, x + 5, y + 5, CELL - 10, CELL - 10, 16, (i + Math.floor(i / 3)) % 2 ? '#241a38' : '#1d1630');
   }
-  ctx.strokeStyle = '#d98aab'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = '#ff78b566'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
   for (const k of [1, 2]) {
     ctx.beginPath(); ctx.moveTo(BX + k * CELL, BY + 6); ctx.lineTo(BX + k * CELL, BY + CELL * 3 - 6); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(BX + 6, BY + k * CELL); ctx.lineTo(BX + CELL * 3 - 6, BY + k * CELL); ctx.stroke();

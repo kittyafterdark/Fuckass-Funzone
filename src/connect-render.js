@@ -11,7 +11,17 @@ export const berryColumnAt = (x, y) => {
   if (!Number.isFinite(x) || !Number.isFinite(y) || x < BX || x >= BX + CELL * BERRY_COLS || y < 52 || y >= BY + CELL * BERRY_ROWS + 8) return -1;
   return Math.floor((x - BX) / CELL);
 };
-/** Your strawberry has a leafy cap and seeds; Gabu's blueberry wears the cyan right-eye interface. */
+// Gabu's eyes as Kitty draws them on the Snake head: his right eye amber, his left eye blue, so facing you the amber one is on your left.
+function gabuEye(ctx, x, y, r, iris, ring, pupil) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, r * .7, 0, Math.PI * 2); ctx.fillStyle = iris; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = r * .2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r * .3, 0, Math.PI * 2); ctx.fillStyle = pupil; ctx.fill();
+  ctx.beginPath(); ctx.arc(x - r * .28, y - r * .3, r * .16, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+}
+function gabuEyes(ctx, x, y, gap, r) {
+  ctx.save(); gabuEye(ctx, x - gap, y, r, '#fbbf24', '#e58f10', '#451a03'); gabuEye(ctx, x + gap, y, r, '#38bdf8', '#1d97d8', '#082f49'); ctx.restore();
+}
+/** Your strawberry has a leafy cap and seeds; Gabu's blueberry has his amber and blue eyes. */
 export function drawBerryToken(ctx, who, cx, cy, r = R, alpha = 1) {
   if (who !== 1 && who !== 2) return;
   ctx.save(); ctx.globalAlpha = alpha; ctx.translate(cx, cy); ctx.scale(r / R, r / R); ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
@@ -30,8 +40,7 @@ export function drawBerryToken(ctx, who, cx, cy, r = R, alpha = 1) {
     ctx.fillStyle = body; ctx.fill(); ctx.strokeStyle = '#1f2470'; ctx.stroke();
     ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 2.2 : 5; ctx.lineTo(Math.cos(a) * rr, -11 + Math.sin(a) * rr); }
     ctx.closePath(); ctx.fillStyle = '#2a2f86'; ctx.fill();
-    ctx.fillStyle = '#e8ebff'; ctx.beginPath(); ctx.arc(-5, 2, 1.9, 0, Math.PI * 2); ctx.fill();
-    ctx.save(); ctx.shadowColor = '#6ff3ff'; ctx.shadowBlur = 5; ctx.fillStyle = '#6ff3ff'; ctx.beginPath(); ctx.arc(5, 2, 2.4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    gabuEyes(ctx, 0, 1.6, 5, 2.8);
     ctx.strokeStyle = '#e8ebff'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-2.2, 6.6); ctx.lineTo(2.2, 6.2); ctx.stroke();
   }
   ctx.globalAlpha = alpha * .45; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.ellipse(-7, -5, 3.4, 1.8, -.6, 0, Math.PI * 2); ctx.fill();

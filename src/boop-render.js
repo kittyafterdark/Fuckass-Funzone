@@ -25,6 +25,16 @@ export function boopHoleAt(x, y, game = null) {
   }
   return bestDistance <= 80 ? best : -1;
 }
+// Gabu's eyes as Kitty draws them on the Snake head: his right eye amber, his left eye blue, so facing you the amber one is on your left.
+function gabuEye(ctx, x, y, r, iris, ring, pupil) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, r * .7, 0, Math.PI * 2); ctx.fillStyle = iris; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = r * .2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r * .3, 0, Math.PI * 2); ctx.fillStyle = pupil; ctx.fill();
+  ctx.beginPath(); ctx.arc(x - r * .28, y - r * .3, r * .16, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+}
+function gabuEyes(ctx, x, y, gap, r) {
+  ctx.save(); gabuEye(ctx, x - gap, y, r, '#fbbf24', '#e58f10', '#451a03'); gabuEye(ctx, x + gap, y, r, '#38bdf8', '#1d97d8', '#082f49'); ctx.restore();
+}
 /** A fluffy bunny (white or golden) or one of Gabu's little robots, drawn standing at the origin. */
 export function drawCritter(ctx, kind, squish = 1) {
   ctx.save(); ctx.scale(1, squish); ctx.lineWidth = 1.6; ctx.lineJoin = 'round';
@@ -33,8 +43,7 @@ export function drawCritter(ctx, kind, squish = 1) {
     ctx.beginPath(); ctx.arc(0, -66, 4, 0, Math.PI * 2); ctx.fillStyle = '#ff8fb8'; ctx.fill(); ctx.stroke();
     rounded(ctx, -27, -52, 54, 56, 16, '#b8a7ff'); ctx.beginPath(); ctx.roundRect(-27, -52, 54, 56, 16); ctx.stroke();
     rounded(ctx, -20, -42, 40, 24, 9, '#2a2147');
-    ctx.fillStyle = '#ffe9f7'; ctx.beginPath(); ctx.arc(-9, -30, 4, 0, Math.PI * 2); ctx.fill();
-    ctx.save(); ctx.shadowColor = '#6ff3ff'; ctx.shadowBlur = 8; ctx.fillStyle = '#6ff3ff'; ctx.beginPath(); ctx.arc(9, -30, 5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    gabuEyes(ctx, 0, -30, 9, 5.5);
     ctx.strokeStyle = '#4b3f7a'; for (const x of [-10, -3, 4, 11]) { ctx.beginPath(); ctx.moveTo(x, -10); ctx.lineTo(x, -4); ctx.stroke(); }
     ctx.restore(); return;
   }
