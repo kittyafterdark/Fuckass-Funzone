@@ -1968,10 +1968,10 @@ class ReactionDirector {
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
-  else if(event==='free'){mood='hype';priority=4;}
-  else if(event==='snap'){mood='smug';priority=4;}
-  else if(event==='timeout'){mood='sleepy';priority=3;}
-  else if(event==='crack'){mood='panic';priority=2;}
+  else if(game==='sugar'&&event==='free'){mood='hype';priority=4;}
+  else if(game==='sugar'&&event==='snap'){mood='smug';priority=4;}
+  else if(game==='sugar'&&event==='timeout'){mood='sleepy';priority=3;}
+  else if(game==='sugar'&&event==='crack'){mood='panic';priority=2;}
   else if(event==='special_created'){mood='hype';priority=3;}
   else if(event==='no_moves'){mood='shock';priority=6;duration=4.2;}
   else if(event==='cascade'||event==='win'||event==='new_best'){mood='hype';priority=5;duration=3.8;}
@@ -7391,9 +7391,9 @@ const SUGAR_PACES = Object.freeze(['chill', 'normal', 'hard']);
 const STEP = 3, SCALE = 84, HEARTS = 3, KEY_STEP = 4, COOL = .05, SMOOTH = .25, CRACKS = Object.freeze([.4, .7]);
 // Pace sets how close to the line the needle must stay, how fast it can safely carve, how much a slip strains the toffee, and the time.
 const PACE = Object.freeze({
-  chill: { tol: 9, safe: 150, rush: .3, slip: .0015, time: 2.8, extra: 10 },
-  normal: { tol: 6.5, safe: 115, rush: .45, slip: .0025, time: 2, extra: 6 },
-  hard: { tol: 4.5, safe: 85, rush: .65, slip: .004, time: 1.45, extra: 3 },
+  chill: { tol: 9, safe: 150, rush: .3, slip: .0015, time: 4, extra: 15 },
+  normal: { tol: 6.5, safe: 115, rush: .45, slip: .0025, time: 3, extra: 10 },
+  hard: { tol: 4.5, safe: 85, rush: .65, slip: .004, time: 2.2, extra: 6 },
 });
 const pace = value => SUGAR_PACES.includes(value) ? value : 'normal';
 const unit = random => Math.max(0, Math.min(.999999999, Number(random()) || 0));
@@ -7504,18 +7504,20 @@ class SugarSnapGame {
     const n = this.needle;
     if (!this.carving || !n?.down || !Number.isFinite(x) || !Number.isFinite(y)) return;
     const length = Math.hypot(x - n.x, y - n.y), steps = Math.max(1, Math.ceil(length / 1.5)), fromX = n.x, fromY = n.y;
-    this.motion += length;
     for (let i = 1; i <= steps && this.carving; i++) this.touch(fromX + (x - fromX) * i / steps, fromY + (y - fromY) * i / steps, length / steps);
   }
   lift() { if (this.needle) this.needle.down = false; this.last = -1; }
   touch(x, y, moved) {
     const n = this.needle; n.x = x; n.y = y;
+    // Only movement on the toffee counts toward carving speed; sweeping across the plate is free.
+    const onCandy = Math.hypot(x - SUGAR_CX, y - SUGAR_CY) < SUGAR_R;
+    if (onCandy) this.motion += moved;
     const { index, gap } = this.nearest(x, y), r = this.rules;
     n.on = gap <= r.tol;
     if (n.on) { this.mark(index); return; }
     this.last = -1;
     // Scratching the toffee away from the line strains it; the plate around the candy is safe to touch.
-    if (moved > 0 && Math.hypot(x - SUGAR_CX, y - SUGAR_CY) < SUGAR_R) {
+    if (moved > 0 && onCandy) {
       this.strain(r.slip * moved, x, y);
       const s = this.scratches[this.scratches.length - 1];
       if (!s || Math.hypot(s.x - x, s.y - y) > 3) { this.scratches.push({ x, y }); if (this.scratches.length > 160) this.scratches.shift(); }
@@ -7549,6 +7551,9 @@ class SugarSnapGame {
   }
   strain(amount, x, y) {
     if (amount <= 0 || !this.carving) return;
+    // Cracks always start on the toffee, wherever the push came from.
+    const from = Math.hypot(x - SUGAR_CX, y - SUGAR_CY), inside = (SUGAR_R - 4) / Math.max(from, SUGAR_R - 4);
+    x = SUGAR_CX + (x - SUGAR_CX) * inside; y = SUGAR_CY + (y - SUGAR_CY) * inside;
     const before = this.stress; this.stress = Math.min(1, this.stress + amount); this.peak = Math.max(this.peak, this.stress);
     for (const [level, mark] of CRACKS.entries()) if (before < mark && this.stress >= mark) {
       // A crack starts near where the toffee was pushed hardest and runs off at a random angle.

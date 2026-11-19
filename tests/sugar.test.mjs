@@ -43,6 +43,11 @@ test('a needle off the line carves nothing and scratching the toffee strains it 
   assert.equal(g.progress, 0, 'nothing is carved off the line'); assert.ok(g.stress > 0 && g.scratches.length > 0);
   g.lift(); g.press(SUGAR_CX + 200, SUGAR_CY); g.drag(SUGAR_CX + 200, SUGAR_CY + 80);
   const plate = g.stress; assert.ok(plate > 0); g.drag(SUGAR_CX + 200, SUGAR_CY + 120); assert.equal(g.stress, plate, 'the plate around the candy is safe to touch');
+  // Sweeping fast across the plate, even off the canvas edge, is not carving speed, and any crack stays on the toffee.
+  for (let i = 0; i < 30; i++) { g.drag(i % 2 ? -80 : 440, SUGAR_CY + 150); g.update(1 / 60); }
+  assert.ok(g.stress <= plate, 'a fast sweep off the candy does not strain it (it even cools a little)');
+  g.strain(.01, -500, -500); assert.ok(g.cracks.every(c => Math.hypot(c.x - SUGAR_CX, c.y - SUGAR_CY) < SUGAR_R), 'cracks start on the toffee');
+  assert.ok(new SugarSnapGame().restore(g.snapshot()), 'so the save still loads');
   g.lift(); g.press(SUGAR_CX, SUGAR_CY + 20);
   for (let i = 0; i < 400 && g.phase === 'carve'; i++) g.drag(SUGAR_CX + (i % 2 ? 6 : -6), SUGAR_CY + 20);
   assert.deepEqual(events.filter(e => e === 'crack').length, 2, 'two warning cracks before it gives');

@@ -1086,10 +1086,10 @@ export class ReactionDirector {
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
-  else if(event==='free'){mood='hype';priority=4;}
-  else if(event==='snap'){mood='smug';priority=4;}
-  else if(event==='timeout'){mood='sleepy';priority=3;}
-  else if(event==='crack'){mood='panic';priority=2;}
+  else if(game==='sugar'&&event==='free'){mood='hype';priority=4;}
+  else if(game==='sugar'&&event==='snap'){mood='smug';priority=4;}
+  else if(game==='sugar'&&event==='timeout'){mood='sleepy';priority=3;}
+  else if(game==='sugar'&&event==='crack'){mood='panic';priority=2;}
   else if(event==='special_created'){mood='hype';priority=3;}
   else if(event==='no_moves'){mood='shock';priority=6;duration=4.2;}
   else if(event==='cascade'||event==='win'||event==='new_best'){mood='hype';priority=5;duration=3.8;}
