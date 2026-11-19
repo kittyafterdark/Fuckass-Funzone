@@ -9,7 +9,7 @@ const wrongLetters = g => [...LOCK_LETTERS].filter(ch => !g.word.includes(ch));
 test('Lockscreen words: letters only, no repeats, and every difficulty has plenty in range', () => {
   const all = Object.values(LOCK_WORDS).flat();
   assert.ok(all.every(word => /^[A-Z]{4,13}$/.test(word))); assert.equal(new Set(all).size, all.length, 'no word appears twice');
-  assert.deepEqual(LOCK_CATEGORIES, ['SWEETS', 'GAMES', 'TECH', 'ANIMALS', 'ROOM']);
+  assert.deepEqual(LOCK_CATEGORIES, ['SWEETS', 'GAMES', 'TECH', 'ANIMALS', 'HOME']);
   for (const pace of LOCK_PACES) {
     const pool = lockPool(pace); assert.ok(pool.length >= 40, `${pace} has enough words`);
     const lengths = pool.map(([cat, i]) => LOCK_WORDS[cat][i].length);

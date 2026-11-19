@@ -1899,7 +1899,7 @@ const SAYINGS=Object.freeze({
    "New record?! Who gave you my password manager? Name names.",
    "Best run yet. [Security audit: Gabu, you absolute clown.]",
    "Record cracked. I'm changing every password I own. Tonight. Out of spite.",
-   "A new best. Fine. You're good at guessing. Mostly my stuff. Creepy."
+   "A new best. Fine. You're good at guessing. Suspiciously good."
   ],
   win:[
    "ACCESS GRANTED?! That was a STRONG password! ...Was it?",
@@ -7857,7 +7857,7 @@ const {LOCK_PACES,LOCK_LETTERS,LOCK_WORDS,LOCK_LABELS,LOCK_CATEGORIES,lockPool,L
 const LOCK_PACES = Object.freeze(['chill', 'normal', 'hard']);
 const LOCK_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 // Original word lists, all everyday words people know. Letters only, so every one can be typed on any keyboard.
-// ROOM is ordinary stuff from Gabu's room; the screen shows it as GABU’S ROOM.
+// HOME shows on screen as AROUND THE HOUSE.
 const LOCK_WORDS = Object.freeze({
   SWEETS: Object.freeze([
     'COOKIE', 'DONUT', 'TOFFEE', 'WAFER', 'CUPCAKE', 'PUDDING', 'BROWNIE', 'SPRINKLES', 'CARAMEL', 'LOLLIPOP', 'MARSHMALLOW', 'CHURRO', 'GUMDROP',
@@ -7875,12 +7875,12 @@ const LOCK_WORDS = Object.freeze({
     'BUNNY', 'KITTEN', 'PUPPY', 'HAMSTER', 'PENGUIN', 'DOLPHIN', 'OCTOPUS', 'GIRAFFE', 'ELEPHANT', 'KOALA', 'PANDA', 'RACCOON', 'HEDGEHOG',
     'FLAMINGO', 'SQUIRREL', 'TURTLE', 'BUTTERFLY', 'CROCODILE', 'KANGAROO', 'ZEBRA', 'MONKEY', 'PARROT', 'OTTER', 'WOLF', 'TIGER', 'LION', 'BEAR',
     'FROG', 'DUCK', 'SHARK', 'WHALE', 'JELLYFISH', 'LADYBUG', 'CHAMELEON', 'GORILLA']),
-  ROOM: Object.freeze([
-    'HEADPHONES', 'HOODIE', 'JETPACK', 'SNACKS', 'STICKERS', 'PILLOW', 'BLANKET', 'POSTER', 'BEANBAG', 'BACKPACK', 'SNEAKERS', 'LAMP', 'PLUSHIE',
-    'MIRROR', 'DESK', 'CHAIR', 'GUITAR', 'SKATEBOARD', 'CALENDAR', 'WINDOW', 'CURTAINS', 'CARPET', 'BOOKSHELF', 'NOTEBOOK', 'CONSOLE', 'CANDLE',
+  HOME: Object.freeze([
+    'HEADPHONES', 'HOODIE', 'UMBRELLA', 'SNACKS', 'STICKERS', 'PILLOW', 'BLANKET', 'POSTER', 'BEANBAG', 'BACKPACK', 'SNEAKERS', 'LAMP', 'PLUSHIE',
+    'MIRROR', 'DESK', 'CHAIR', 'GUITAR', 'SKATEBOARD', 'CALENDAR', 'WINDOW', 'CURTAINS', 'CARPET', 'BOOKSHELF', 'NOTEBOOK', 'TOOTHBRUSH', 'CANDLE',
     'SLIPPERS', 'PAJAMAS', 'TOOLBOX', 'SCREWDRIVER', 'HAMMOCK', 'PLANT']),
 });
-const LOCK_LABELS = Object.freeze({ SWEETS: 'SWEETS', GAMES: 'GAMES', TECH: 'TECH', ANIMALS: 'ANIMALS', ROOM: 'GABU’S ROOM' });
+const LOCK_LABELS = Object.freeze({ SWEETS: 'SWEETS', GAMES: 'GAMES', TECH: 'TECH', ANIMALS: 'ANIMALS', HOME: 'AROUND THE HOUSE' });
 const LOCK_CATEGORIES = Object.freeze(Object.keys(LOCK_WORDS));
 // Pace sets how many wrong guesses the face scan needs to lock on, which word lengths come up, and whether the category is shown.
 const PACE = Object.freeze({
@@ -10557,8 +10557,8 @@ export function setup(ctx) {
     else if(activeMode==='bubble'){current.setAim(x,y);bubbleAiming=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     // Malware Mayhem steers while the finger moves; a press that never moves is a tap toward where it landed.
     else if(activeMode==='malware'){malwareFrom={x,y,moved:false};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
-    // Sugar Snap carves while the needle is down; after a result, a tap brings the next shape.
     else if(activeMode==='lockscreen'){if(current.phase==='over')current.nextWord();else{const key=lockKeyAt(x,y);if(key>=0)current.guess(LOCK_LETTERS[key]);}}
+    // Sugar Snap carves while the needle is down; after a result, a tap brings the next shape.
     else if(activeMode==='sugar'){if(current.phase==='over')current.nextRound();else{current.press(x,y);sugarCarving=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}}
     else if(activeMode==='tetris'){
       const control=tetrisControlAt(x,y);

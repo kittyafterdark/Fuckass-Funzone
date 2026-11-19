@@ -924,8 +924,8 @@ export function setup(ctx) {
     else if(activeMode==='bubble'){current.setAim(x,y);bubbleAiming=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     // Malware Mayhem steers while the finger moves; a press that never moves is a tap toward where it landed.
     else if(activeMode==='malware'){malwareFrom={x,y,moved:false};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
-    // Sugar Snap carves while the needle is down; after a result, a tap brings the next shape.
     else if(activeMode==='lockscreen'){if(current.phase==='over')current.nextWord();else{const key=lockKeyAt(x,y);if(key>=0)current.guess(LOCK_LETTERS[key]);}}
+    // Sugar Snap carves while the needle is down; after a result, a tap brings the next shape.
     else if(activeMode==='sugar'){if(current.phase==='over')current.nextRound();else{current.press(x,y);sugarCarving=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}}
     else if(activeMode==='tetris'){
       const control=tetrisControlAt(x,y);

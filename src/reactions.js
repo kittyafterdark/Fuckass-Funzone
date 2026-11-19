@@ -1017,7 +1017,7 @@ const SAYINGS=Object.freeze({
    "New record?! Who gave you my password manager? Name names.",
    "Best run yet. [Security audit: Gabu, you absolute clown.]",
    "Record cracked. I'm changing every password I own. Tonight. Out of spite.",
-   "A new best. Fine. You're good at guessing. Mostly my stuff. Creepy."
+   "A new best. Fine. You're good at guessing. Suspiciously good."
   ],
   win:[
    "ACCESS GRANTED?! That was a STRONG password! ...Was it?",
