@@ -1,4 +1,4 @@
-/** Boop-a-Bun canvas: a pastel garden with nine burrows, fluffy bunnies, golden bunnies and Gabu's robot decoys. */
+/** Boop-a-Bun canvas: a moonlit garden with nine burrows, fluffy bunnies, golden bunnies and Gabu's robot decoys. */
 import { BOOP_HOLES, BOOP_DURATION } from './boop.js';
 
 const W = 360, H = 452, COLS = [70, 180, 290], ROWS = [168, 268, 368], RX = 44, RY = 14;
@@ -63,14 +63,23 @@ export function drawCritter(ctx, kind, squish = 1) {
   ctx.restore();
 }
 // `cursor` is false until the player uses the keyboard, so taps never leave a stray highlight.
-export function drawBoopABun(canvas, game, { best = 0, reduced = false, cursor = true } = {}) {
+export function drawBoopABun(canvas, game, { best = 0, reduced = false, cursor = true, time = 0 } = {}) {
   if (!canvas?.getContext) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
   ctx.save(); ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
-  const grass = ctx.createLinearGradient(0, 0, 0, H); grass.addColorStop(0, '#c9efb4'); grass.addColorStop(1, '#93d48b'); ctx.fillStyle = grass; ctx.fillRect(0, 0, W, H);
+  // A moonlit garden: dark grass, a low moon, flowers that catch the light, and a few fireflies.
+  const grass = ctx.createLinearGradient(0, 0, 0, H); grass.addColorStop(0, '#1d3b3a'); grass.addColorStop(1, '#10221f'); ctx.fillStyle = grass; ctx.fillRect(0, 0, W, H);
+  const moon = ctx.createRadialGradient(300, 112, 4, 300, 112, 60); moon.addColorStop(0, '#fff6d644'); moon.addColorStop(1, '#fff6d600');
+  ctx.fillStyle = moon; ctx.fillRect(220, 50, 140, 130); ctx.beginPath(); ctx.arc(300, 112, 13, 0, Math.PI * 2); ctx.fillStyle = '#fff3cf'; ctx.fill();
+  ctx.beginPath(); ctx.arc(306, 108, 11, 0, Math.PI * 2); ctx.fillStyle = '#1d3b3a'; ctx.fill();
   for (let i = 0; i < 22; i++) {
-    const x = (i * 83 + 17) % W, y = 96 + (i * 131 + 7) % 320; ctx.fillStyle = ['#ffd1e1', '#fff6d6', '#e6dcff'][i % 3];
+    const x = (i * 83 + 17) % W, y = 96 + (i * 131 + 7) % 320; ctx.fillStyle = ['#ffd1e166', '#fff6d655', '#e6dcff55'][i % 3];
     for (let p = 0; p < 5; p++) { const a = p * Math.PI * 2 / 5; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 2.6, y + Math.sin(a) * 2.6, 2, 0, Math.PI * 2); ctx.fill(); }
-    ctx.fillStyle = '#ffcf5a'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffcf5a88'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill();
+  }
+  for (let i = 0; i < 7; i++) {
+    const t = reduced ? 0 : time, x = (i * 97 + 40 + Math.sin(t * .7 + i) * 14) % W, y = 120 + (i * 53) % 260 + Math.cos(t * .9 + i * 2) * 10;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, 7); glow.addColorStop(0, '#e9ff9acc'); glow.addColorStop(1, '#e9ff9a00');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
   }
   rounded(ctx, 0, 0, W, 50, 0, '#2c1a33');
   ctx.save(); ctx.translate(26, 40); ctx.scale(.36, .36); drawCritter(ctx, 'bun'); ctx.restore();
@@ -78,28 +87,28 @@ export function drawBoopABun(canvas, game, { best = 0, reduced = false, cursor =
   drawTxt(ctx, `SCORE ${game.score}`, 196, 31, 11, '#fdfaf7', 'center');
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   const fraction = game.timeLeft / BOOP_DURATION, low = game.timeLeft <= 10;
-  rounded(ctx, 20, 62, 200, 14, 7, '#ffffffa0'); rounded(ctx, 22, 64, Math.max(0, 196 * fraction), 10, 5, low ? '#ff6f9f' : '#7fcf8a');
-  drawTxt(ctx, `${Math.ceil(game.timeLeft)}s`, 228, 74, 11, low ? '#c93a6c' : '#2f6b3a');
-  drawTxt(ctx, game.combo >= 2 ? `COMBO ×${game.combo}` : String(game.pace).toUpperCase(), 340, 74, 11, game.combo >= 2 ? '#c93a6c' : '#2f6b3a', 'right');
+  rounded(ctx, 20, 62, 200, 14, 7, '#ffffff26'); rounded(ctx, 22, 64, Math.max(0, 196 * fraction), 10, 5, low ? '#ff6f9f' : '#7fcf8a');
+  drawTxt(ctx, `${Math.ceil(game.timeLeft)}s`, 228, 74, 11, low ? '#ff8fb8' : '#b9f5c9');
+  drawTxt(ctx, game.combo >= 2 ? `COMBO ×${game.combo}` : String(game.pace).toUpperCase(), 340, 74, 11, game.combo >= 2 ? '#ff8fb8' : '#b9f5c9', 'right');
   for (let i = 0; i < BOOP_HOLES; i++) {
     const cx = COLS[i % 3], cy = ROWS[Math.floor(i / 3)], h = game.holes[i], rise = game.height(i);
     // The cursor ring sits on the grass, under the burrow and anything climbing out of it.
     if (cursor && game.status === 'playing' && i === game.cursor) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.ellipse(cx, cy, RX + 9, RY + 9, 0, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]); }
-    ctx.beginPath(); ctx.ellipse(cx, cy, RX + 6, RY + 6, 0, 0, Math.PI * 2); ctx.fillStyle = '#7bbf72'; ctx.fill();
-    ctx.beginPath(); ctx.ellipse(cx, cy, RX, RY, 0, 0, Math.PI * 2); ctx.fillStyle = '#5a3a2e'; ctx.fill();
-    ctx.beginPath(); ctx.ellipse(cx, cy + 3, RX - 6, RY - 5, 0, 0, Math.PI * 2); ctx.fillStyle = '#3b241c'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, cy, RX + 6, RY + 6, 0, 0, Math.PI * 2); ctx.fillStyle = '#2f5a45'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, cy, RX, RY, 0, 0, Math.PI * 2); ctx.fillStyle = '#2b1c18'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, cy + 3, RX - 6, RY - 5, 0, 0, Math.PI * 2); ctx.fillStyle = '#170e0c'; ctx.fill();
     if (h && rise > 0) {
       // Clip at the burrow mouth so the critter rises out of the ground instead of floating over it.
       ctx.save(); ctx.beginPath(); ctx.rect(cx - 70, cy - 110, 140, 110); ctx.ellipse(cx, cy, RX, RY, 0, 0, Math.PI); ctx.clip();
       ctx.translate(cx, cy + 6 + (1 - rise) * 78); drawCritter(ctx, h.kind, h.booped ? .78 : 1); ctx.restore();
     }
-    ctx.strokeStyle = '#4f9a50'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, cy, RX + 1, RY + 1, 0, 0, Math.PI); ctx.stroke();
+    ctx.strokeStyle = '#3d7a52'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(cx, cy, RX + 1, RY + 1, 0, 0, Math.PI); ctx.stroke();
   }
   for (const e of game.effects) {
     const cx = COLS[e.index % 3], cy = ROWS[Math.floor(e.index / 3)], lift = reduced ? 0 : e.age * 60;
     ctx.globalAlpha = Math.max(0, 1 - e.age / .7);
     if (e.kind === 'whiff') { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy - 6, 10 + e.age * 30, 0, Math.PI * 2); ctx.stroke(); }
-    else drawTxt(ctx, e.points > 0 ? `+${e.points}` : String(e.points), cx, cy - 70 - lift, e.kind === 'gold' ? 18 : 15, e.kind === 'bot' ? '#6a58c8' : e.kind === 'gold' ? '#c48a1c' : '#e0477c', 'center');
+    else drawTxt(ctx, e.points > 0 ? `+${e.points}` : String(e.points), cx, cy - 70 - lift, e.kind === 'gold' ? 18 : 15, e.kind === 'bot' ? '#b8a7ff' : e.kind === 'gold' ? '#ffd36e' : '#ff8fb8', 'center');
     ctx.globalAlpha = 1;
   }
   rounded(ctx, 0, 412, W, 40, 0, '#2c1a33');
