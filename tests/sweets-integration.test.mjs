@@ -2,6 +2,8 @@ import test, { mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { setup } from '../dist/frontend.js';
 import { ChessGame } from '../src/chess.js';
+import { sugarPath } from '../src/sugar.js';
+import { LOCK_WORDS } from '../src/lockscreen.js';
 
 class ElementMock {
   constructor(tag = 'div') {
@@ -107,7 +109,7 @@ test('bundled Catmate Chess plays by keyboard and touch, lets Gabu reply, pauses
   });
 });
 
-test('bundled Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, Wobbly Wafers and Gacha Match accept their controls and save', () => {
+test('bundled Star Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, Glow Stack and Gacha Match accept their controls and save', () => {
   withHost({}, h => {
     h.pick('berry'); h.key('Digit4'); h.frames(10);
     assert.equal(h.save().puzzles.berry.board.filter(v => v === 1).length, 1, 'key 4 dropped a strawberry');
@@ -129,9 +131,13 @@ test('bundled Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, 
     const boop = h.save().puzzles.boop; assert.ok(boop.timeLeft < 45, 'the round clock runs'); assert.equal(boop.cursor, 0, 'the tap moved the cursor to the first burrow');
     h.key('KeyP'); const pausedBoop = h.save().puzzles.boop; h.frames(10); assert.equal(h.save().puzzles.boop.timeLeft, pausedBoop.timeLeft, 'pause stops the clock');
     h.key('KeyP');
-    h.pick('wafer'); h.tap(180, 290); h.frames(2); h.tap(5, 5); h.frames(1);
-    const wafer = h.save().puzzles.wafer; assert.equal(wafer.layers.flat().filter(Boolean).length, 36, 'one wafer moved from the middle to the top');
-    assert.ok(wafer.layers.length === 13 || wafer.status === 'dead', 'the pulled wafer started a new top layer');
+    // A finger holds a Glow Stack block and drags it straight down; the part of the drag along the block slides it out.
+    h.pick('wafer'); const stackCanvas = h.findClass('bb-canvas');
+    stackCanvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 260 });
+    for (let i = 1; i <= 24; i++) { stackCanvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 260 + i * 6 }); h.frames(1); }
+    stackCanvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 404 }); h.frames(1);
+    const stack = h.save().puzzles.wafer; assert.equal(stack.layers.flat().filter(Boolean).length, 36, 'one block moved from the middle to the top');
+    assert.ok(stack.layers.length === 13 || stack.status === 'dead', 'the pulled block started a new top layer');
     h.pick('memory'); h.key('Space'); h.key('Space'); h.key('ArrowRight'); h.key('Space');
     assert.equal(h.save().puzzles.memory.moves, 1, 'the first Space ends the countdown, then two keyboard flips make one turn');
     for (const id of ['berry', 'tictac', 'cake', 'bubble', 'boop', 'wafer', 'memory']) h.pick(id);
@@ -193,5 +199,70 @@ test('touches on the phone are claimed so scrolling the launcher never drags the
     const press = pointerType => { let claimed = false; h.findClass('bb-phone').dispatch('pointerdown', { pointerType, preventDefault() { claimed = true; } }); return claimed; };
     assert.equal(press('touch'), true, 'the host skips drags for prevented pointerdowns, so the list scrolls instead');
     assert.equal(press('mouse'), false, 'a mouse can still drag the widget from anywhere, as before');
+  });
+});
+
+test('bundled Malware Mayhem plays by keys and swipes, and the run survives reload', () => {
+  withHost({}, h => {
+    h.pick('malware'); h.frames(14);
+    h.key('ArrowLeft'); h.frames(6);
+    // Single bytes are saved in batches; pausing saves straight away.
+    h.key('KeyP'); const ran = h.save().puzzles.malware; h.key('KeyP');
+    assert.ok(ran.score > 0, 'arrow keys steer the virus into the data'); assert.equal(ran.status, 'paused', 'saves store a running game as paused');
+    const canvas = h.findClass('bb-canvas');
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 300 });
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 240 });
+    h.frames(8); h.key('KeyP'); assert.ok(h.save().puzzles.malware.score > ran.score, 'a swipe up turns the virus into the next corridor');
+    h.key('KeyP'); const beforeDrag = h.save().puzzles.malware.score;
+    // A finger that keeps moving steers on every leg, before it lifts.
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 3, clientX: 200, clientY: 300 });
+    for (const [x, y] of [[188, 300], [176, 300], [176, 288], [176, 276]]) canvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 3, clientX: x, clientY: y });
+    h.frames(8); h.key('KeyP'); assert.ok(h.save().puzzles.malware.score > beforeDrag, 'a drag steers while the finger is still down'); h.key('KeyP');
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 3, clientX: 176, clientY: 276 });
+    assert.equal(h.drawerSelect('Malware Mayhem pace').value, 'normal');
+    const score = h.save().puzzles.malware.score; h.reload(); h.pick('malware');
+    assert.equal(h.save().puzzles.malware.score, score, 'the run comes back after a reload');
+  });
+});
+
+test('bundled Sugar Snap carves by finger and by key, keeps its difficulty, and the run survives reload', () => {
+  withHost({}, h => {
+    h.pick('sugar'); h.key('Space'); h.frames(2);
+    const canvas = h.findClass('bb-canvas'), heart = sugarPath('heart');
+    // A steady finger along the pressed line: four outline samples (12 px) per 120 ms host frame.
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 4, clientX: heart[0].x, clientY: heart[0].y });
+    for (let i = 1; i <= heart.length; i++) { const p = heart[i % heart.length]; canvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 4, clientX: p.x, clientY: p.y }); if (i % 4 === 0) h.frames(1); }
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 4, clientX: heart[0].x, clientY: heart[0].y });
+    const freed = h.save().puzzles.sugar;
+    assert.equal(freed.result, 'free', 'tracing the heart frees it'); assert.ok(freed.score > 100); assert.equal(freed.status, 'paused', 'saves store a running game as paused');
+    h.key('Space'); h.key('KeyP'); assert.equal(h.save().puzzles.sugar.round, 1, 'Space brings the next shape');
+    h.key('KeyP'); for (let i = 0; i < 12; i++) { h.key('Space'); h.frames(2); }
+    h.key('KeyP'); assert.ok(h.save().puzzles.sugar.cut.includes('1'), 'Space carves along the line'); h.key('KeyP');
+    assert.equal(h.drawerSelect('Sugar Snap difficulty').value, 'normal');
+    const saved = h.save().puzzles.sugar; h.reload(); h.pick('sugar');
+    assert.equal(h.save().puzzles.sugar.cut, saved.cut, 'the carved line comes back after a reload');
+  });
+});
+
+test('bundled Gabu’s Lockscreen types letters (P included), pauses on Escape, takes taps, and the run survives reload', () => {
+  withHost({}, h => {
+    // Opening a game from the phone starts it.
+    h.pick('lockscreen'); h.key('KeyP');
+    // Letter guesses save in a batch with the next frame, so Escape (which pauses and saves at once) reads them back.
+    h.key('Escape'); const saved = h.save().puzzles.lockscreen;
+    assert.equal(saved.guessed, 'P', 'P is a guess on the lockscreen, not the pause key'); assert.equal(saved.status, 'paused', 'Escape pauses it');
+    h.key('Escape');
+    const word = LOCK_WORDS[saved.category][saved.index], canvas = h.findClass('bb-canvas');
+    // Tap the first key (A) on the screen keyboard, then type the rest of the word.
+    canvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 5, clientX: 30, clientY: 285 });
+    canvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 5, clientX: 30, clientY: 285 });
+    h.key('Escape'); assert.ok(h.save().puzzles.lockscreen.guessed.includes('A'), 'a tap on the screen keyboard guesses its letter'); h.key('Escape');
+    for (const ch of new Set(word)) h.key(`Key${ch}`);
+    h.key('Escape'); const done = h.save().puzzles.lockscreen;
+    assert.equal(done.result, 'cracked'); assert.ok(done.score > 0); h.key('Escape');
+    assert.equal(h.drawerSelect('Lockscreen difficulty').value, 'normal');
+    h.key('Enter'); h.key('Escape'); const next = h.save().puzzles.lockscreen; assert.equal(next.phase, 'guess', 'Enter brings the next password');
+    h.reload(); h.pick('lockscreen');
+    assert.equal(h.save().puzzles.lockscreen.index, next.index, 'the run comes back after a reload');
   });
 });

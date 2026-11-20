@@ -25,7 +25,17 @@ export function drawPockyMark(ctx, cx, cy, size, alpha = 1) {
   }
   ctx.restore();
 }
-/** Gabu's mark: a glazed donut with sprinkles and a cyan glint where the right eye would be. */
+// Gabu's eyes as Kitty draws them on the Snake head: his right eye amber, his left eye blue, so facing you the amber one is on your left.
+function gabuEye(ctx, x, y, r, iris, ring, pupil) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, r * .7, 0, Math.PI * 2); ctx.fillStyle = iris; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = r * .2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r * .3, 0, Math.PI * 2); ctx.fillStyle = pupil; ctx.fill();
+  ctx.beginPath(); ctx.arc(x - r * .28, y - r * .3, r * .16, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+}
+function gabuEyes(ctx, x, y, gap, r) {
+  ctx.save(); gabuEye(ctx, x - gap, y, r, '#fbbf24', '#e58f10', '#451a03'); gabuEye(ctx, x + gap, y, r, '#38bdf8', '#1d97d8', '#082f49'); ctx.restore();
+}
+/** Gabu's mark: a glazed donut with sprinkles, peeking at you with his amber and blue eyes. */
 export function drawDonutMark(ctx, cx, cy, size, alpha = 1) {
   ctx.save(); ctx.globalAlpha = alpha; ctx.translate(cx, cy); ctx.scale(size / 60, size / 60);
   ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI * 2); ctx.arc(0, 0, 8, 0, Math.PI * 2, true); ctx.fillStyle = '#e2a25f'; ctx.fill('evenodd');
@@ -38,7 +48,7 @@ export function drawDonutMark(ctx, cx, cy, size, alpha = 1) {
     const a = i * .53 + .2, r = 13 + (i % 3) * 2.6;
     ctx.save(); ctx.translate(Math.cos(a) * r, Math.sin(a) * r); ctx.rotate(a * 2.3); ctx.fillStyle = colors[i % 4]; ctx.beginPath(); ctx.roundRect(-2.4, -.9, 4.8, 1.8, .9); ctx.fill(); ctx.restore();
   }
-  ctx.save(); ctx.shadowColor = '#6ff3ff'; ctx.shadowBlur = 6; ctx.fillStyle = '#6ff3ff'; ctx.beginPath(); ctx.arc(12, -12, 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  gabuEyes(ctx, 0, -15, 6, 3.6);
   ctx.restore();
 }
 const LEVEL_NAMES = Object.freeze({ chill: 'CHILL GABU', normal: 'NORMAL GABU', hard: 'HARD GABU' });
@@ -54,25 +64,33 @@ export function drawTicTacTreats(canvas, game, { best = 0, images = {}, reduced 
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   rounded(ctx, 20, 45, 320, 1, 0, '#4a3546');
   drawTxt(ctx, `ROUND ${game.round}  ·  WINS ${game.wins}  ·  DRAWS ${game.draws}`, 22, 66, 10, '#e2c9da');
+  drawTxt(ctx, 'ONLY YOUR 3 NEWEST TREATS STAY', 180, 84, 8, '#bfa9c4', 'center');
   drawTxt(ctx, LEVEL_NAMES[game.level] || 'GABU', 338, 66, 10, '#e2c9da', 'right');
   // Quilted picnic cushion with stitched dividers.
-  rounded(ctx, BX - 14, BY - 14, CELL * 3 + 28, CELL * 3 + 28, 26, '#c77d9d');
-  rounded(ctx, BX - 11, BY - 11, CELL * 3 + 22, CELL * 3 + 22, 23, '#ffe3ee');
+  rounded(ctx, BX - 14, BY - 14, CELL * 3 + 28, CELL * 3 + 28, 26, '#5f4277');
+  rounded(ctx, BX - 11, BY - 11, CELL * 3 + 22, CELL * 3 + 22, 23, '#1a1528');
   for (let i = 0; i < 9; i++) {
     const x = BX + (i % 3) * CELL, y = BY + Math.floor(i / 3) * CELL;
-    rounded(ctx, x + 5, y + 5, CELL - 10, CELL - 10, 16, (i + Math.floor(i / 3)) % 2 ? '#ffd0e1' : '#ffe9f1');
+    rounded(ctx, x + 5, y + 5, CELL - 10, CELL - 10, 16, (i + Math.floor(i / 3)) % 2 ? '#241a38' : '#1d1630');
   }
-  ctx.strokeStyle = '#d98aab'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+  ctx.strokeStyle = '#ff78b566'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
   for (const k of [1, 2]) {
     ctx.beginPath(); ctx.moveTo(BX + k * CELL, BY + 6); ctx.lineTo(BX + k * CELL, BY + CELL * 3 - 6); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(BX + 6, BY + k * CELL); ctx.lineTo(BX + CELL * 3 - 6, BY + k * CELL); ctx.stroke();
   }
   ctx.setLineDash([]);
   const yourTurn = game.status === 'playing' && game.phase === 'turn' && game.turn === 1;
+  // The treat each side loses on its next placement shows faded, so you can plan around it. Nothing blinks.
+  const fadingNext = [game.fading(1), game.fading(2)], center = i => [BX + (i % 3) * CELL + CELL / 2, BY + Math.floor(i / 3) * CELL + CELL / 2];
+  for (const e of game.eaten) {
+    if (reduced) continue;
+    const [cx, cy] = center(e.cell), t = e.age / .35;
+    (e.who === 1 ? drawPockyMark : drawDonutMark)(ctx, cx, cy, 62 * (1 - t * .6), 1 - t);
+  }
   for (let i = 0; i < 9; i++) {
-    const cx = BX + (i % 3) * CELL + CELL / 2, cy = BY + Math.floor(i / 3) * CELL + CELL / 2, grow = reduced ? 1 : .55 + .45 * Math.min(1, game.placed[i] || 1);
-    if (game.board[i] === 1) drawPockyMark(ctx, cx, cy, 62 * grow);
-    else if (game.board[i] === 2) drawDonutMark(ctx, cx, cy, 62 * grow);
+    const [cx, cy] = center(i), grow = reduced ? 1 : .55 + .45 * Math.min(1, game.placed[i] || 1), alpha = fadingNext.includes(i) && game.phase === 'turn' ? .42 : 1;
+    if (game.board[i] === 1) drawPockyMark(ctx, cx, cy, 62 * grow, alpha);
+    else if (game.board[i] === 2) drawDonutMark(ctx, cx, cy, 62 * grow, alpha);
     else if (cursor && yourTurn && i === game.cursor) drawPockyMark(ctx, cx, cy, 54, .28);
   }
   if (cursor && game.status === 'playing' && game.phase === 'turn') {
@@ -88,14 +106,14 @@ export function drawTicTacTreats(canvas, game, { best = 0, images = {}, reduced 
   }
   const thinking = game.status === 'playing' && game.phase === 'turn' && game.turn === 2;
   if (thinking) drawSprite(ctx, images.gabu_smug, 92, 384, 26, 26);
-  const legend = game.status === 'dead' ? 'THREE DONUTS IN A ROW' : game.phase === 'over' ? (game.result === 'win' ? 'THREE POCKY! TAP FOR THE NEXT ROUND' : 'A TIE. TAP FOR THE NEXT ROUND') :
+  const legend = game.status === 'dead' ? 'THREE DONUTS IN A ROW' : game.phase === 'over' ? (game.result === 'win' ? 'THREE POCKY! TAP FOR THE NEXT ROUND' : 'THE TREATS WENT STALE. TAP FOR THE NEXT ROUND') :
     yourTurn ? 'YOUR TREAT' : thinking ? 'GABU IS PLOTTING' : 'TIC TAC TREATS';
   drawTxt(ctx, legend, 180, 404, 12, game.phase === 'over' && game.result === 'win' ? '#ffe08a' : '#fdf2f7', 'center');
   drawTxt(ctx, game.starter === 2 ? 'GABU STARTED THIS ROUND' : 'YOU STARTED THIS ROUND', 180, 423, 9, '#d6bccc', 'center');
   drawTxt(ctx, 'TAP A SQUARE  ·  ARROWS + SPACE  ·  KEYS 1–9', 180, 441, 9, '#bfa9c4', 'center');
   if (game.status === 'dead') overlay(ctx, 'GABU WINS', `Streak over: ${game.wins} ${game.wins === 1 ? 'win' : 'wins'}, ${game.score} points.`, 'PRESS PLAY FOR A NEW STREAK', '#a99cf5');
   else if (game.status === 'paused') overlay(ctx, 'PAUSED', 'Gabu is pretending not to look.', 'PRESS PLAY TO RESUME', '#b8a7ff');
-  else if (game.status === 'idle') overlay(ctx, 'TIC TAC TREATS', 'Three pocky in a row beats the donuts.', 'PRESS PLAY OR TAP TO START', '#ff7fae');
+  else if (game.status === 'idle') overlay(ctx, 'TIC TAC TREATS', 'Three in a row wins, but only your 3 newest treats stay.', 'PRESS PLAY OR TAP TO START', '#ff7fae');
   ctx.restore();
 }
 function overlay(ctx, message, sub, hint, accent) {

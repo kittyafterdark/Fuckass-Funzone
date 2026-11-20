@@ -3,10 +3,10 @@
  */
 import { kingSquare, inCheck } from './chess.js';
 
-const W = 360, H = 452, X = 20, Y = 62, CELL = 40;
+const W = 360, H = 452, X = 20, Y = 56, CELL = 40;
 const SIDES = Object.freeze({
   w: { body: '#fff6ec', shade: '#f3d9c9', ink: '#6b4558', ear: '#ffc2d6', eye: '#3a2638', cushion: '#f7c6d8', cushionEdge: '#c77d9d' },
-  b: { body: '#4b3668', shade: '#382852', ink: '#1d1329', ear: '#c78bd8', eye: '#ffe9f7', cushion: '#2a1d3d', cushionEdge: '#8f7bd6' },
+  b: { body: '#4b3668', shade: '#382852', ink: '#1d1329', ear: '#c78bd8', cushion: '#2a1d3d', cushionEdge: '#8f7bd6' },
 });
 const HAT = Object.freeze({ gold: '#ffd36e', goldInk: '#9b6418', gem: '#ff6fa5', stone: '#e6dcff', stoneInk: '#6f5f9a', mint: '#9fe6d6', mintInk: '#2f7d6d', steel: '#d5deea', steelInk: '#56647a', plume: '#ff8fb8' });
 const rounded = (ctx, x, y, w, h, r, fill) => { ctx.fillStyle = fill; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); };
@@ -18,6 +18,16 @@ export const chessSquareAt = (x, y) => {
   if (!Number.isFinite(x) || !Number.isFinite(y) || x < X || y < Y || x >= X + CELL * 8 || y >= Y + CELL * 8) return -1;
   return Math.floor((y - Y) / CELL) * 8 + Math.floor((x - X) / CELL);
 };
+// Gabu's eyes as Kitty draws them on the Snake head: his right eye amber, his left eye blue, so facing you the amber one is on your left.
+function gabuEye(ctx, x, y, r, iris, ring, pupil) {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, r * .7, 0, Math.PI * 2); ctx.fillStyle = iris; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = r * .2; ctx.stroke();
+  ctx.beginPath(); ctx.arc(x, y, r * .3, 0, Math.PI * 2); ctx.fillStyle = pupil; ctx.fill();
+  ctx.beginPath(); ctx.arc(x - r * .28, y - r * .3, r * .16, 0, Math.PI * 2); ctx.fillStyle = '#ffffff'; ctx.fill();
+}
+function gabuEyes(ctx, x, y, gap, r) {
+  ctx.save(); gabuEye(ctx, x - gap, y, r, '#fbbf24', '#e58f10', '#451a03'); gabuEye(ctx, x + gap, y, r, '#38bdf8', '#1d97d8', '#082f49'); ctx.restore();
+}
 function shape(ctx, points, fill, ink) {
   ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]);
   for (const [px, py] of points.slice(1)) ctx.lineTo(px, py);
@@ -44,12 +54,12 @@ export function drawChessPiece(ctx, piece, cx, cy, size = CELL) {
   }
   ctx.beginPath(); ctx.ellipse(0, 4, 12, 10.5, 0, 0, Math.PI * 2); ctx.fillStyle = c.body; ctx.fill(); ctx.strokeStyle = c.ink; ctx.stroke();
   ctx.beginPath(); ctx.ellipse(0, 9.5, 8, 3.6, 0, 0, Math.PI); ctx.fillStyle = c.shade; ctx.fill();
-  // Gabu's side wears Gabu's cyan right-eye interface; yours has plain kitten eyes.
-  ctx.fillStyle = c.eye; ctx.beginPath(); ctx.arc(-4.5, 3, 1.7, 0, Math.PI * 2); ctx.fill();
-  if (side === 'b') {
-    ctx.save(); ctx.shadowColor = '#6ff3ff'; ctx.shadowBlur = 4; ctx.fillStyle = '#6ff3ff';
-    ctx.beginPath(); ctx.arc(4.5, 3, 2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  } else { ctx.beginPath(); ctx.arc(4.5, 3, 1.7, 0, Math.PI * 2); ctx.fill(); }
+  // Gabu's kittens have his eyes; yours have plain kitten eyes.
+  if (side === 'b') gabuEyes(ctx, 0, 3, 4.6, 2.6);
+  else {
+    ctx.fillStyle = c.eye; ctx.beginPath(); ctx.arc(-4.5, 3, 1.7, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(4.5, 3, 1.7, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.strokeStyle = side === 'w' ? c.ink : '#f2d9ff'; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(-2, 6.2); ctx.quadraticCurveTo(-1, 7.6, 0, 6.4); ctx.quadraticCurveTo(1, 7.6, 2, 6.2); ctx.stroke();
   ctx.globalAlpha = .55; ctx.fillStyle = '#ff9fc0';
@@ -106,20 +116,20 @@ export function drawChess(canvas, game, { best = 0, images = {}, cursor = -1, re
   ctx.save(); ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
   const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#2b1831'); bg.addColorStop(1, '#1a1324'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   for (let i = 0; i < 14; i++) { ctx.fillStyle = i % 3 ? '#ffc8e014' : '#fff3c722'; ctx.fillRect((i * 71 + 13) % W, (i * 109 + 23) % H, 2, 2); }
-  drawChessPiece(ctx, 'K', 26, 24, 24);
+  drawChessPiece(ctx, 'k', 26, 24, 24);
   drawTxt(ctx, 'CATMATE', 42, 31, 12, '#ffe6ef');
   drawTxt(ctx, `SCORE ${game.score}`, 170, 31, 11, '#fdfaf7', 'center');
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   rounded(ctx, 20, 45, 320, 1, 0, '#4a3546');
-  rounded(ctx, X - 6, Y - 6, CELL * 8 + 12, CELL * 8 + 12, 14, '#c77d9d');
-  rounded(ctx, X - 4, Y - 4, CELL * 8 + 8, CELL * 8 + 8, 12, '#ffd7e6');
+  rounded(ctx, X - 6, Y - 6, CELL * 8 + 12, CELL * 8 + 12, 14, '#5f4277');
+  rounded(ctx, X - 4, Y - 4, CELL * 8 + 8, CELL * 8 + 8, 12, '#2a1d3d');
   const board = game.board, checked = game.status !== 'idle' && inCheck(game.pos) ? kingSquare(board, game.pos.turn) : -1;
   const moves = game.status === 'playing' ? game.targets() : [];
   const last = game.lastMove;
   for (let sq = 0; sq < 64; sq++) {
     const x = X + (sq & 7) * CELL, y = Y + (sq >> 3) * CELL, light = ((sq & 7) + (sq >> 3)) % 2 === 0;
-    ctx.fillStyle = light ? '#fff0f5' : '#f0b4cc'; ctx.fillRect(x, y, CELL, CELL);
-    if (last && (sq === last.from || sq === last.to)) { ctx.globalAlpha = .5; ctx.fillStyle = '#ffe08a'; ctx.fillRect(x, y, CELL, CELL); ctx.globalAlpha = 1; }
+    ctx.fillStyle = light ? '#8a6fa3' : '#5a4373'; ctx.fillRect(x, y, CELL, CELL);
+    if (last && (sq === last.from || sq === last.to)) { ctx.globalAlpha = .3; ctx.fillStyle = '#ffe08a'; ctx.fillRect(x, y, CELL, CELL); ctx.globalAlpha = 1; }
     if (sq === game.selected) { ctx.globalAlpha = .55; ctx.fillStyle = '#8df0ec'; ctx.fillRect(x, y, CELL, CELL); ctx.globalAlpha = 1; }
     if (sq === checked) {
       const pulse = reduced ? .7 : .55 + .25 * Math.sin(time * 7);
@@ -127,13 +137,13 @@ export function drawChess(canvas, game, { best = 0, images = {}, cursor = -1, re
       glow.addColorStop(0, `rgba(255,77,121,${pulse})`); glow.addColorStop(1, 'rgba(255,77,121,0)'); ctx.fillStyle = glow; ctx.fillRect(x, y, CELL, CELL);
     }
   }
-  // A soft inner rim keeps the board plush instead of a hard-edged grid.
-  ctx.strokeStyle = '#ffd7e6'; ctx.lineWidth = 4; ctx.beginPath(); ctx.roundRect(X - 2, Y - 2, CELL * 8 + 4, CELL * 8 + 4, 10); ctx.stroke();
+  // A dark inner rim keeps the board soft-edged instead of a hard grid.
+  ctx.strokeStyle = '#2a1d3d'; ctx.lineWidth = 4; ctx.beginPath(); ctx.roundRect(X - 2, Y - 2, CELL * 8 + 4, CELL * 8 + 4, 10); ctx.stroke();
   for (let sq = 0; sq < 64; sq++) drawChessPiece(ctx, board[sq], X + (sq & 7) * CELL + CELL / 2, Y + (sq >> 3) * CELL + CELL / 2, CELL);
   for (const move of moves) {
     const x = X + (move.to & 7) * CELL, y = Y + (move.to >> 3) * CELL;
     if (move.captured) { ctx.strokeStyle = '#ff5d93'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.roundRect(x + 2.5, y + 2.5, CELL - 5, CELL - 5, 9); ctx.stroke(); }
-    else { ctx.globalAlpha = .62; paw(ctx, x + CELL / 2, y + CELL / 2 + 1, '#b9507f', 1); ctx.globalAlpha = 1; }
+    else { ctx.globalAlpha = .62; paw(ctx, x + CELL / 2, y + CELL / 2 + 1, '#ffb3cf', 1); ctx.globalAlpha = 1; }
   }
   if (cursor >= 0 && cursor < 64) cornerFocus(ctx, X + (cursor & 7) * CELL, Y + (cursor >> 3) * CELL, '#5fd8d2');
   const thinking = game.status === 'playing' && game.pos.turn === 'b';

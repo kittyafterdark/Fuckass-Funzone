@@ -19,12 +19,12 @@ const mix = (a, b, t) => {
   const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16)), pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16));
   return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('');
 };
-// Sky keys by camera height: bakery morning, peach sunset, lavender dusk, then a starry night.
-const SKY = [[0, '#ffd6e5', '#fff1e6'], [700, '#ffb38f', '#ffd9c2'], [1500, '#8e72c9', '#d59ad6'], [2400, '#1f1840', '#3c2c6b']];
+// Sky keys by camera height: the late-night bakery glow fades into a deeper, starrier sky as the cake climbs.
+const SKY = [[0, '#2e1d47', '#57305e'], [700, '#251a42', '#3f2658'], [1500, '#181433', '#2b1f4a'], [2400, '#0c0b20', '#181433']];
 function skyAt(height) {
   for (let i = 1; i < SKY.length; i++) if (height < SKY[i][0]) {
     const t = (height - SKY[i - 1][0]) / (SKY[i][0] - SKY[i - 1][0]);
-    return [mix(SKY[i - 1][1], SKY[i][1], t), mix(SKY[i - 1][2], SKY[i][2], t), Math.max(0, (height - 1500) / 900)];
+    return [mix(SKY[i - 1][1], SKY[i][1], t), mix(SKY[i - 1][2], SKY[i][2], t), Math.min(1, .35 + height / 2400 * .65)];
   }
   return [SKY[SKY.length - 1][1], SKY[SKY.length - 1][2], 1];
 }
@@ -72,7 +72,7 @@ export function drawCakeTower(canvas, game, { best = 0, images = {}, reduced = f
     ctx.globalAlpha = night * (.4 + (i % 3) * .2); ctx.fillStyle = '#fff6d6';
     ctx.fillRect((i * 61 + 17) % CAKE_W, ((i * 89 + 11) + cam * .2) % CAKE_H, i % 4 ? 2 : 3, i % 4 ? 2 : 3);
   }
-  ctx.globalAlpha = .55 * (1 - night);
+  ctx.globalAlpha = .07 * (1 - night);
   for (let i = 0; i < 4; i++) {
     const cx = ((i * 131 + 40) + (reduced ? 0 : time * 8)) % (CAKE_W + 120) - 60, cy = ((i * 173 + 90) + cam * .45) % (CAKE_H + 80) - 40;
     rounded(ctx, cx - 30, cy - 8, 70, 18, 9, '#ffffff'); rounded(ctx, cx - 10, cy - 18, 34, 22, 11, '#ffffff');
@@ -80,8 +80,8 @@ export function drawCakeTower(canvas, game, { best = 0, images = {}, reduced = f
   ctx.globalAlpha = 1;
   const ground = screen(0);
   if (ground < CAKE_H + 60) {
-    for (let i = 0; i < 12; i++) { ctx.fillStyle = i % 2 ? '#ff9fbd' : '#fff4f7'; ctx.fillRect(i * 30, ground + 24, 30, CAKE_H); }
-    ctx.fillStyle = '#e57a9f'; ctx.fillRect(0, ground + 22, CAKE_W, 4);
+    for (let i = 0; i < 12; i++) { ctx.fillStyle = i % 2 ? '#3a2550' : '#2c1d42'; ctx.fillRect(i * 30, ground + 24, 30, CAKE_H); }
+    ctx.fillStyle = '#ff78b5'; ctx.fillRect(0, ground + 22, CAKE_W, 4);
     rounded(ctx, CAKE_W / 2 - 14, ground + 2, 28, 22, 4, '#eaf6ff'); rounded(ctx, CAKE_W / 2 - 34, ground + 18, 68, 7, 3, '#d5ecfb');
     rounded(ctx, CAKE_W / 2 - PLATE_W / 2, ground - 4, PLATE_W, 8, 4, '#f4fbff'); ctx.strokeStyle = '#a9cde3'; ctx.lineWidth = 1.2;
     ctx.beginPath(); ctx.roundRect(CAKE_W / 2 - PLATE_W / 2, ground - 4, PLATE_W, 8, 4); ctx.stroke();
@@ -97,10 +97,10 @@ export function drawCakeTower(canvas, game, { best = 0, images = {}, reduced = f
   // Missed tiers tip around their middle as they fall away.
   for (const c of game.crumbs) { ctx.save(); ctx.translate(c.x, screen(c.y) - LAYER_H / 2); ctx.rotate(c.spin); drawCakeTier(ctx, c.flavor, 0, LAYER_H / 2, 3); ctx.restore(); }
   // Crane rail and ribbon. The ribbon hangs from a pivot above the screen and bows a little behind its swing, like a real rope.
-  rounded(ctx, 0, 6, CAKE_W, 12, 0, '#ff9fbd'); for (let i = 0; i < 12; i++) rounded(ctx, i * 32 + 4, 9, 18, 6, 3, '#ffd1e1');
+  rounded(ctx, 0, 6, CAKE_W, 12, 0, '#3a2a55'); for (let i = 0; i < 12; i++) rounded(ctx, i * 32 + 4, 9, 18, 6, 3, '#ff78b566');
   const swinging = game.status !== 'dead' && game.phase === 'swing', hx = game.hookX(), hy = game.hookY();
   const along = (18 - ROPE_PIVOT_Y) / (hy - ROPE_PIVOT_Y), sx = CAKE_W / 2 + (hx - CAKE_W / 2) * along, bow = reduced ? 0 : -game.ropeSpeed() * 9;
-  ctx.strokeStyle = '#d9578a'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.strokeStyle = '#ff8fb8'; ctx.lineWidth = 2; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.moveTo(sx, 18); ctx.quadraticCurveTo((sx + hx) / 2 + bow, (18 + hy) / 2, hx, hy); ctx.stroke();
   heartShape(ctx, hx, hy - 2, 6, '#ff6f9f');
   if (swinging) {
@@ -112,8 +112,8 @@ export function drawCakeTower(canvas, game, { best = 0, images = {}, reduced = f
   if (game.drop) drawCakeTier(ctx, game.drop.flavor, game.drop.x, screen(game.drop.y), game.tiers.length);
   if (game.perfectFlash > 0 && shown) {
     ctx.globalAlpha = Math.min(1, game.perfectFlash * 2); const py = screen(game.topY()) - 14;
-    ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 6;
-    drawTxt(ctx, game.combo >= 3 ? `PERFECT ×${game.combo}` : 'PERFECT!', game.topX(), py, 14, '#d63a72', 'center'); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+    ctx.shadowColor = '#ff78b5'; ctx.shadowBlur = 8;
+    drawTxt(ctx, game.combo >= 3 ? `PERFECT ×${game.combo}` : 'PERFECT!', game.topX(), py, 14, '#ffd36e', 'center'); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
   }
   rounded(ctx, 10, 26, 340, 40, 12, '#2a1d31'); // Opaque so the ribbon passes behind the scoreboard.
   ctx.save(); ctx.translate(28, 59); ctx.scale(.26, .5); drawCakeTier(ctx, 'vanilla', 0, 0, 2); ctx.restore();
@@ -131,7 +131,7 @@ export function drawCakeTower(canvas, game, { best = 0, images = {}, reduced = f
   }
   const warn = game.sway >= 24 && game.status === 'playing';
   drawTxt(ctx, warn ? 'IT’S WOBBLING. LAND A PERFECT ONE' : game.combo >= 2 ? `PERFECT STREAK ×${game.combo}` : 'TAP OR SPACE TO DROP THE TIER', 180, 440, 10,
-    warn ? '#ff5d8f' : night > .5 ? '#f4e8ff' : '#7a3d5c', 'center');
+    warn ? '#ff5d8f' : '#f4e8ff', 'center');
   if (game.status === 'dead') overlay(ctx, 'OUT OF CAKE', `${game.tiers.length} tiers · best streak ${game.bestCombo}`, 'PRESS PLAY TO BAKE AGAIN', '#ff8fb8');
   else if (game.status === 'paused') overlay(ctx, 'PAUSED', 'The frosting is setting.', 'PRESS PLAY TO RESUME', '#b8a7ff');
   else if (game.status === 'idle') overlay(ctx, 'CAKE TOWER', 'Drop each tier right on top. Perfect ones steady it.', 'PRESS PLAY OR TAP TO START', '#ffd36e');

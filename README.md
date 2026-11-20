@@ -16,7 +16,7 @@
 
 ## Pick a game
 
-Open **Funzone OS** from the arcade drawer to launch any of the twenty-one games in the floating cabinet.
+Open **Funzone OS** from the arcade drawer to launch any of the twenty-four games in the floating cabinet.
 
 | Game | How to play |
 | --- | --- |
@@ -33,18 +33,21 @@ Open **Funzone OS** from the arcade drawer to launch any of the twenty-one games
 | **Solitaire** | Play draw-one Klondike: tap a source card or run, then its destination; tap the stock to draw or recycle. Use Undo to take back a move. |
 | **Froggy** | Hop with the arrows, WASD, or touch pad. Dodge cars, ride logs, and fill five different homes to advance. |
 | **Catmate Chess** | Full-rules chess against Gabu with plush cat pieces. Tap a kitten, then a glowing paw print, or use the arrows and Enter. Z undoes. |
-| **Berry Drop** | Connect four strawberries before Gabu's blueberries do. Tap a column or press 1–7. Keep the win streak alive. |
-| **Tic Tac Treats** | Pocky crosses against Gabu's donuts. Tap a square or press 1–9. Wins and draws build your streak. |
+| **Star Drop** | Connect four stars in a night-sky chart before Gabu's planets do; four in a row lights up a constellation. Tap a column or press 1–7. |
+| **Tic Tac Treats** | Pocky crosses against Gabu's donuts. Tap a square or press 1–9. Each side keeps only its three newest treats, so the board keeps shifting. Wins build your streak. |
 | **Cake Tower** | Drop each swinging tier with a tap or Space. A tier only stays if its middle lands over the tier below. Perfect drops steady the cake; sloppy ones make it wobble and harder to aim at. Three missed tiers end the run. |
-| **Bubble Bloom** | Drag to aim and release, or aim with the arrows and shoot with Space. Pop three of a kind and drop what hangs. |
+| **Bubble Bloom** | Drag to aim and release, or aim with the arrows and shoot with Space. Pop three of a kind and drop what hangs. Pops in a row build a combo, and a full Bloom meter loads a rainbow bubble that matches anything. |
 | **Boop-a-Bun** | Boop bunnies as they pop out of their burrows. Golden ones pay extra; skip Gabu's robot decoys. |
-| **Wobbly Wafers** | Take turns with Gabu pulling wafers from the tower. Tap a wafer, then tap again while the meter is green. Don't topple it. |
+| **Glow Stack** | A tower of glowing glass blocks at a three-quarter angle, against Gabu. Hold a block and slide it out toward you slowly, or hold Space. Loose blocks come out clean; stuck ones shake the tower. Don't topple it. |
 | **Gacha Match** | Memorize the open capsules, then open two at a time to find every pair of matching charms. Choose a cozy, classic, or busy tray. |
 | **Gabu's Gambit** | Build a deck across eight Antes, combine five of 75 original Jokers, open eight booster variants, and continue into Endless. |
+| **Malware Mayhem** | Play a little virus loose in Gabu's mainframe: eat every byte of his data while his antivirus bots hunt you. Swipe, tap, or use the arrows. An exploit chip corrupts the bots so you can crash them back to their reboot dock. |
+| **Sugar Snap** | Gabu presses a shape into honeycomb toffee; carve it out with a needle before the timer runs out. Drag along the line or hold Space. Too fast or off the line and it cracks. |
+| **Gabu's Lockscreen** | Guess the passcode on Gabu's phone one letter at a time before its face scan locks on. Type, tap the screen keyboard, or use the arrows and Enter; Escape pauses. |
 
-Tetris, Solitaire, Froggy, Gambit, and the eight games added in upstream 2.7.0 pause with **P** or the cabinet's main button. They also pause when the window loses focus; saved games resume paused. Solitaire supports keyboard play: arrows choose cards/piles, Enter selects, D draws, F moves the selected top card to its foundation, Z/U undoes, and Escape cancels selection. Undo history lasts for the current session; the board itself survives reloads.
+Tetris, Solitaire, Froggy, Gambit, Malware Mayhem, Sugar Snap, and the eight games added in upstream 2.7.0 pause with **P** or the cabinet's main button; Gabu's Lockscreen uses **Escape**, since P is a letter there. They also pause when the window loses focus; saved games resume paused. Solitaire supports keyboard play: arrows choose cards/piles, Enter selects, D draws, F moves the selected top card to its foundation, Z/U undoes, and Escape cancels selection. Undo history lasts for the current session; the board itself survives reloads.
 
-Catmate Chess, Berry Drop, Tic Tac Treats, and Wobbly Wafers are played against Gabu, with a Chill, Normal, or Hard opponent in each game's drawer settings. Cake Tower, Bubble Bloom, and Boop-a-Bun have Chill, Normal, and Chaos paces, and Gacha Match has three tray sizes. A new difficulty, pace, or board size applies to your next new game, never to the one in progress. Chess undo also lasts for the current session only.
+Catmate Chess, Star Drop, Tic Tac Treats, and Glow Stack are played against Gabu, with a Chill, Normal, or Hard opponent in each game's drawer settings. Cake Tower, Bubble Bloom, Boop-a-Bun, and Malware Mayhem have Chill, Normal, and Chaos paces; Sugar Snap and Gabu's Lockscreen have Chill, Normal, and Hard difficulties; and Gacha Match has three tray sizes. A new difficulty, pace, or board size applies to your next new game, never to the one in progress. Chess undo also lasts for the current session only.
 
 ### Gabu's Gambit prototype
 
@@ -85,4 +88,4 @@ No npm dependencies are needed. Run `npm run check` to rebuild `dist/frontend.js
 
 For a playable mock-host preview, run `python -m http.server 8765 --bind 127.0.0.1` from the repository root and open [the local preview](http://127.0.0.1:8765/demo-classics-qa.html). This checks the bundled UI but does not replace testing in live Lumiverse; see [the acceptance checklist](docs/TESTING.md).
 
-For the Gambit mock-host preview, run `python -m http.server 8766 --bind 127.0.0.1` from the repository root and open [Gabu's Gambit locally](http://127.0.0.1:8766/demo-gambit-qa.html). Its selector includes isolated shop and booster examples. This preview also runs the combined twenty-one-game bundle; live Lumiverse and real touch-device checks remain pending.
+For the Gambit mock-host preview, run `python -m http.server 8766 --bind 127.0.0.1` from the repository root and open [Gabu's Gambit locally](http://127.0.0.1:8766/demo-gambit-qa.html). Its selector includes isolated shop and booster examples. This preview also runs the combined twenty-four-game bundle; live Lumiverse and real touch-device checks remain pending.

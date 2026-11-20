@@ -36,7 +36,7 @@
     document.querySelector('#end').onclick=()=>handlers.get('GENERATION_ENDED')?.({generationId:'preview'});
     drawer.querySelector('.bb-drawer-os-button').click();
     const game=new URLSearchParams(location.search).get('game');
-    if(['tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory'].includes(game))widget.querySelector(`[data-game="${game}"].bb-app`).click();
+    if(['tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory','malware','sugar','lockscreen'].includes(game))widget.querySelector(`[data-game="${game}"].bb-app`).click();
     window.addEventListener('pagehide',()=>teardown(),{once:true});
   }catch(error){document.querySelector('#error').textContent=error.stack||String(error)}
 </script>

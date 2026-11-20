@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funzone — three new games</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#100d19;color:#f7ecf8;font:14px/1.5 system-ui,sans-serif;padding:24px}
+  header{max-width:1000px;margin:0 auto 22px}h1{font-size:24px;margin:0 0 4px}p{color:#c2aec9;margin:0 0 12px}
+  nav{display:flex;gap:10px;align-items:center;flex-wrap:wrap}nav button,select{padding:8px 12px;border-radius:8px;background:#34243f;color:#fff;border:1px solid #71517f}
+  .layout{display:flex;gap:28px;align-items:flex-start;justify-content:center}.mock-widget{width:382px;height:605px;flex-shrink:0;max-width:100%}
+  aside{width:330px;max-height:750px;overflow:auto}#error{color:#ff8caf;white-space:pre-wrap}
+  @media(max-width:760px){body{padding:12px}.layout{flex-direction:column;align-items:center}aside{width:100%;max-width:382px;max-height:440px}}
+</style>
+<header>
+  <h1>Three more reasons to miss the reply</h1>
+  <p>Playable preview of the bundled extension in a mock Spindle host. Live Lumiverse layout and host behavior still need checking.</p>
+  <nav><button id="open">Open arcade</button><label>Cabinet width <select id="width"><option value="382">382 px</option><option value="292">292 px</option></select></label><button id="start">Simulate thinking</button><button id="end">Simulate ready</button></nav>
+  <p id="error" role="alert"></p>
+</header>
+<div class="layout"><main id="widget" class="mock-widget"></main><aside id="drawer"></aside></div>
+<script type="module">
+  // Always load the latest local rebuild when this QA page is refreshed.
+  const { setup } = await import('./dist/frontend.js?preview='+Date.now());
+  const handlers=new Map(),widget=document.querySelector('#widget'),drawer=document.querySelector('#drawer');
+  const handle=root=>({root,setVisible(visible){root.hidden=!visible},destroy(){root.replaceChildren()}});
+  let launch=()=>{};
+  window.addEventListener('error',event=>document.querySelector('#error').textContent=event.message);
+  try{
+    const teardown=setup({host:{extensionInstallationId:'classics-preview'},events:{on(name,fn){handlers.set(name,fn);return()=>handlers.delete(name)}},ui:{
+      createFloatWidget(){return handle(widget)},registerDrawerTab(){return handle(drawer)},
+      registerInputBarAction(){return {onClick(fn){launch=fn;return()=>{launch=()=>{}}},destroy(){}}}
+    }});
+    document.querySelector('#open').onclick=()=>launch();
+    document.querySelector('#width').onchange=event=>widget.style.width=event.target.value+'px';
+    document.querySelector('#start').onclick=()=>handlers.get('GENERATION_STARTED')?.({generationId:'preview'});
+    document.querySelector('#end').onclick=()=>handlers.get('GENERATION_ENDED')?.({generationId:'preview'});
+    drawer.querySelector('.bb-drawer-os-button').click();
+    const game=new URLSearchParams(location.search).get('game');
+    if(['tetris','solitaire','froggy','chess','berry','tictac','cake','bubble','boop','wafer','memory'].includes(game))widget.querySelector(`[data-game="${game}"].bb-app`).click();
+    window.addEventListener('pagehide',()=>teardown(),{once:true});
+  }catch(error){document.querySelector('#error').textContent=error.stack||String(error)}
+</script>
+</html>

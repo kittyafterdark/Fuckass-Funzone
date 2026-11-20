@@ -155,6 +155,8 @@ test('adding Gambit to a twenty-game profile preserves every existing save, reco
     h.window.dispatch('blur'); profile = h.save();
   });
   delete profile.puzzles.gambit; delete profile.bests.gambit;
+  // Malware Mayhem arrived after Gambit, so a pre-Gambit profile has none of its data either.
+  for (const id of ['malware', 'sugar', 'lockscreen']) { delete profile.puzzles[id]; delete profile.bests[id]; delete profile.toyPaces[id]; }
   const previousPuzzles = structuredClone(profile.puzzles);
   assert.equal(Object.keys(previousPuzzles).length, 18, 'the twenty upstream games have eighteen saved engines; flight runs do not persist');
   withHost(profile, h => {
@@ -168,7 +170,7 @@ test('adding Gambit to a twenty-game profile preserves every existing save, reco
     for (const [id, snapshot] of Object.entries(previousPuzzles))
       assert.deepEqual(after.puzzles[id], snapshot, `${id} progress survives adding, playing, and reloading Gambit`);
     for (const id of UPSTREAM_MODES) assert.equal(after.bests[id], bests[id], `${id} record remains independent of Gambit`);
-    assert.deepEqual(after.gabuLevels, gabuLevels); assert.deepEqual(after.toyPaces, toyPaces);
+    assert.deepEqual(after.gabuLevels, gabuLevels); assert.deepEqual(after.toyPaces, { ...toyPaces, malware: 'normal', sugar: 'normal', lockscreen: 'normal' }, 'presets survive, and a newer game fills in its default');
     assert.equal(after.tickets, 83, 'switching games and Gambit actions do not change the arcade wallet');
     assert.equal(after.arcadeGame, 'gambit'); assert.equal(h.primary().attributes.get('aria-label'), 'Resume');
   });
