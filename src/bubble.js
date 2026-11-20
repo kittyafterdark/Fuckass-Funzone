@@ -1,19 +1,25 @@
 /** Bubble Bloom: aim, bounce and pop clusters of three before the bubbles reach the cushion line.
+ * Pops and drops charge the Bloom meter; a full meter loads a rainbow bubble that matches whatever it lands against.
+ * Shots that pop in a row build a combo that multiplies their points.
  * Pure rules: no DOM or Spindle APIs. Rows are offset hex rows; `parity` flips when a row is pushed in.
  */
 export const BUBBLE_KINDS = Object.freeze(['heart', 'star', 'fish', 'drop', 'moon', 'flower']);
 // One export per line: the bundler lifts each exported name into the shared scope.
-export const BUBBLE_R = 14;
+export const BUBBLE_R = 15;
 export const BUBBLE_COLS = 10;
 export const BUBBLE_ROWS = 12;
-export const BUBBLE_DEATH_ROW = 11;
-export const BUBBLE_LEFT = 40;
-export const BUBBLE_TOP = 60;
+export const BUBBLE_DEATH_ROW = 10;
+export const BUBBLE_LEFT = 30;
+export const BUBBLE_TOP = 76;
 export const BUBBLE_RH = BUBBLE_R * Math.sqrt(3);
 export const LAUNCH_X = 180;
-export const LAUNCH_Y = 356;
+export const LAUNCH_Y = 358;
 export const BUBBLE_PACES = Object.freeze(['chill', 'normal', 'chaos']);
-const SPEED = 578, MIN_AIM = .2, MAX_AIM = Math.PI - .2;
+// The rainbow bubble's kind number: one past the regular kinds. It only ever rides the launcher, never sits in the grid.
+export const BUBBLE_RAINBOW = BUBBLE_KINDS.length;
+export const BLOOM_FULL = 24;
+const EFFECT_LIFE = Object.freeze({ pop: .45, fall: 1.4, points: .9, callout: 1.3 });
+const SPEED = 619, MIN_AIM = .2, MAX_AIM = Math.PI - .2, COMBO_MAX = 3;
 // Pace changes real board colors and how many misses the ceiling forgives.
 const PACE = Object.freeze({ chill: { kinds: -1, shots: 2 }, normal: { kinds: 0, shots: 0 }, chaos: { kinds: 1, shots: -1 } });
 const pace = value => BUBBLE_PACES.includes(value) ? value : 'normal';
@@ -26,12 +32,12 @@ export class BubbleGame {
   }
   reset(chosen = this.pace) {
     this.pace = pace(chosen); this.status = 'idle'; this.score = 0; this.level = 1; this.aim = Math.PI / 2; this.endReason = null;
-    this.effects = []; this.shot = null; this.onEvent('reset'); this.deal();
+    this.effects = []; this.shot = null; this.bloom = 0; this.combo = 0; this.onEvent('reset'); this.deal();
   }
   /** A fresh board: more rows and more colors as levels climb, capped so it stays readable. */
   deal() {
     this.grid = Array.from({ length: BUBBLE_ROWS }, () => Array(BUBBLE_COLS).fill(-1)); this.parity = 0; this.misses = 0; this.shot = null;
-    const kinds = this.kindCount(), rows = Math.min(7, 4 + Math.floor((this.level - 1) / 2));
+    const kinds = this.kindCount(), rows = Math.min(6, 4 + Math.floor((this.level - 1) / 2));
     for (let r = 0; r < rows; r++) for (let c = 0; c < this.colsIn(r); c++) this.grid[r][c] = Math.floor(unit(this.random) * kinds);
     this.current = this.pickKind(); this.next = this.pickKind();
   }
@@ -70,7 +76,7 @@ export class BubbleGame {
   fire() {
     if (this.status === 'idle') { this.start(); return false; }
     if (this.status !== 'playing' || this.shot) return false;
-    this.shot = { x: LAUNCH_X, y: LAUNCH_Y, vx: Math.cos(this.aim) * SPEED, vy: -Math.sin(this.aim) * SPEED, kind: this.current };
+    this.shot = { x: LAUNCH_X, y: LAUNCH_Y, vx: Math.cos(this.aim) * SPEED, vy: -Math.sin(this.aim) * SPEED, kind: this.current, trail: [] };
     this.current = this.next; this.next = this.pickKind(); this.onEvent('shoot'); return true;
   }
   /** Nearest empty cell that is attached to the ceiling or to another bubble. */
@@ -96,12 +102,23 @@ export class BubbleGame {
     }
     return out;
   }
+  /** A rainbow takes the kind that makes the biggest group where it lands. Against the bare ceiling it takes any kind on the board. */
+  rainbowKind(r, c) {
+    let best = -1, size = 0;
+    for (const k of new Set(this.neighbors(r, c).map(([nr, nc]) => this.grid[nr][nc]).filter(k => k >= 0))) {
+      this.grid[r][c] = k; const n = this.cluster(r, c).length; if (n > size) { size = n; best = k; }
+    }
+    this.grid[r][c] = -1;
+    return best >= 0 ? best : this.pickKind();
+  }
   settle(kind) {
     const cell = this.snapCell(this.shot.x, this.shot.y); this.shot = null;
     if (!cell) { this.finish(); return; }
-    const [r, c] = cell; this.grid[r][c] = kind;
+    const [r, c] = cell, rainbow = kind === BUBBLE_RAINBOW;
+    this.grid[r][c] = rainbow ? this.rainbowKind(r, c) : kind;
     const group = this.cluster(r, c);
-    if (group.length >= 3) {
+    // A rainbow pops anything it touches; a plain bubble needs three of a kind.
+    if (group.length >= 3 || rainbow && group.length >= 2) {
       for (const [gr, gc] of group) { const p = this.center(gr, gc); this.effects.push({ type: 'pop', x: p.x, y: p.y, kind: this.grid[gr][gc], age: 0 }); this.grid[gr][gc] = -1; }
       const anchored = new Set();
       for (let gc = 0; gc < this.colsIn(0); gc++) if (this.grid[0][gc] >= 0) for (const [ar, ac] of this.cluster(0, gc, false)) anchored.add(ar * BUBBLE_COLS + ac);
@@ -111,20 +128,38 @@ export class BubbleGame {
         const p = this.center(fr, fc); this.effects.push({ type: 'fall', x: p.x, y: p.y, vy: -40 - unit(this.random) * 80, kind: this.grid[fr][fc], age: 0 });
         this.grid[fr][fc] = -1; dropped++;
       }
-      const earned = group.length * 10 + dropped * 20 * (1 + Math.floor(dropped / 4));
+      // Pops in a row multiply: x1.25 for the second, x1.5 for the third, up to x3. A rainbow doubles its own pop.
+      this.combo++;
+      const multiplier = Math.min(COMBO_MAX, 1 + (this.combo - 1) * .25) * (rainbow ? 2 : 1);
+      const earned = Math.round((group.length * 10 + dropped * 20 * (1 + Math.floor(dropped / 4))) * multiplier);
+      const at = this.center(r, c);
+      this.effects.push({ type: 'points', x: at.x, y: at.y, text: `+${earned}`, age: 0 });
       this.score = Math.min(999999999, this.score + earned); this.onEvent('score', { score: this.score, earned });
       this.onEvent(dropped >= 4 ? 'avalanche' : group.length >= 6 ? 'big_pop' : 'pop', { popped: group.length, dropped });
+      if (rainbow) this.onEvent('rainbow', { popped: group.length, earned });
+      if (this.combo >= 3) { this.effects.push({ type: 'callout', text: `COMBO \u00d7${this.combo}`, age: 0 }); this.onEvent('combo', { combo: this.combo }); }
+      this.charge(group.length + dropped * 2);
       if (this.grid.every(row => row.every(k => k < 0))) {
         const bonus = 250 * this.level; this.score = Math.min(999999999, this.score + bonus); this.level++;
+        this.effects.push({ type: 'callout', text: 'FIELD CLEARED!', age: 0 });
         this.onEvent('score', { score: this.score, earned: bonus }); this.onEvent('clear', { level: this.level }); this.deal(); return;
       }
-      if (![this.current, this.next].every(k => this.grid.flat().includes(k))) { this.current = this.pickKind(); this.next = this.pickKind(); }
+      // Keep the launcher winnable, but never take away a rainbow that is waiting.
+      for (const slot of ['current', 'next']) if (this[slot] !== BUBBLE_RAINBOW && !this.grid.flat().includes(this[slot])) this[slot] = this.pickKind();
     } else {
-      this.misses++;
+      this.misses++; this.combo = 0;
       this.onEvent('miss', { misses: this.misses, left: this.shotsPerRow() - this.misses });
       if (this.misses >= this.shotsPerRow()) this.pushRow();
     }
     if (this.grid[BUBBLE_DEATH_ROW].some(k => k >= 0)) this.finish();
+  }
+  /** Pops and drops fill the Bloom meter. When it fills, the next bubble in the launcher becomes a rainbow. */
+  charge(amount) {
+    if (this.current === BUBBLE_RAINBOW || this.next === BUBBLE_RAINBOW) return;
+    this.bloom = Math.min(BLOOM_FULL, this.bloom + amount);
+    if (this.bloom < BLOOM_FULL) return;
+    this.bloom = 0; this.next = BUBBLE_RAINBOW;
+    this.effects.push({ type: 'callout', text: 'RAINBOW READY!', age: 0 }); this.onEvent('bloom');
   }
   /** Too many misses: every row slides down one and a new row arrives at the top. */
   pushRow() {
@@ -143,11 +178,12 @@ export class BubbleGame {
     if (!Number.isFinite(delta) || delta <= 0) return;
     const dt = Math.min(delta, .12);
     for (const e of this.effects) { e.age += dt; if (e.type === 'fall') { e.vy += 900 * dt; e.y += e.vy * dt; } }
-    this.effects = this.effects.filter(e => e.age < (e.type === 'pop' ? .35 : 1.4));
+    this.effects = this.effects.filter(e => e.age < EFFECT_LIFE[e.type]);
     if (this.status !== 'playing' || !this.shot) return;
     const s = this.shot, steps = Math.ceil(SPEED * dt / 4);
     for (let i = 0; i < steps && this.shot; i++) {
       s.x += s.vx * dt / steps; s.y += s.vy * dt / steps;
+      if (i % 2 === 0) { s.trail.push({ x: s.x, y: s.y }); if (s.trail.length > 8) s.trail.shift(); }
       if (s.x < BUBBLE_LEFT + BUBBLE_R) { s.x = 2 * (BUBBLE_LEFT + BUBBLE_R) - s.x; s.vx = Math.abs(s.vx); this.onEvent('bounce'); }
       if (s.x > BUBBLE_LEFT + BUBBLE_COLS * BUBBLE_R * 2 - BUBBLE_R) { s.x = 2 * (BUBBLE_LEFT + BUBBLE_COLS * BUBBLE_R * 2 - BUBBLE_R) - s.x; s.vx = -Math.abs(s.vx); this.onEvent('bounce'); }
       let touching = s.y <= BUBBLE_TOP + BUBBLE_R;
@@ -163,23 +199,26 @@ export class BubbleGame {
   snapshot() {
     return { version: 1, grid: this.grid.map(row => [...row]), parity: this.parity, level: this.level, score: this.score, misses: this.misses,
       current: this.shot ? this.shot.kind : this.current, next: this.shot ? this.current : this.next, aim: Math.round(this.aim * 1000) / 1000,
-      endReason: this.endReason, pace: this.pace, status: this.status === 'playing' ? 'paused' : this.status };
+      bloom: this.bloom, endReason: this.endReason, pace: this.pace, status: this.status === 'playing' ? 'paused' : this.status };
   }
   restore(data) {
     if (!data || data.version !== 1 || !Array.isArray(data.grid) || data.grid.length !== BUBBLE_ROWS || ![0, 1].includes(data.parity) ||
       data.grid.some(row => !Array.isArray(row) || row.length !== BUBBLE_COLS || row.some(k => !Number.isInteger(k) || k < -1 || k >= BUBBLE_KINDS.length)) ||
       !whole(data.level, 100000) || data.level < 1 || !whole(data.score, 999999999) || !whole(data.misses, 7) ||
-      !whole(data.current, BUBBLE_KINDS.length - 1) || !whole(data.next, BUBBLE_KINDS.length - 1) || !Number.isFinite(data.aim) ||
+      !whole(data.current, BUBBLE_RAINBOW) || !whole(data.next, BUBBLE_RAINBOW) || data.current === BUBBLE_RAINBOW && data.next === BUBBLE_RAINBOW ||
+      !(data.bloom === undefined || whole(data.bloom, BLOOM_FULL - 1)) || !Number.isFinite(data.aim) ||
       !['idle', 'paused', 'playing', 'dead'].includes(data.status)) return false;
     const savedPace = data.pace === undefined ? 'normal' : data.pace;
     if (!BUBBLE_PACES.includes(savedPace)) return false;
     this.parity = data.parity; this.pace = savedPace;
     if (data.grid.some((row, r) => this.indented(r) && row[BUBBLE_COLS - 1] !== -1)) return false;
-    const dead = data.grid[BUBBLE_DEATH_ROW].some(k => k >= 0);
-    if (dead !== (data.status === 'dead')) return false;
+    // Anything on or past the cushion line ends the run. A run saved before the line moved up a row and already past it
+    // comes back finished rather than refused.
+    const dead = data.grid.slice(BUBBLE_DEATH_ROW).some(row => row.some(k => k >= 0));
+    if (data.status === 'dead' && !dead) return false;
     this.grid = data.grid.map(row => [...row]); this.level = data.level; this.score = data.score; this.misses = Math.min(data.misses, this.shotsPerRow() - 1);
     this.current = data.current; this.next = data.next; this.aim = Math.max(MIN_AIM, Math.min(MAX_AIM, data.aim));
-    this.endReason = dead ? 'line' : null; this.shot = null; this.effects = [];
-    this.status = data.status === 'playing' ? 'paused' : data.status; return true;
+    this.bloom = data.bloom || 0; this.combo = 0; this.endReason = dead ? 'line' : null; this.shot = null; this.effects = [];
+    this.status = dead ? 'dead' : data.status === 'playing' ? 'paused' : data.status; return true;
   }
 }

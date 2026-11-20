@@ -1661,6 +1661,24 @@ const SAYINGS=Object.freeze({
    "They reached the bottom! Too many misses, protagonist. WAY too many.",
    "Overflow! I'm drowning in your bad aim!",
    "Bubbles win. You lose. I need to go pop something to cope."
+  ],
+  bloom:[
+   "Rainbow loaded. I hate that I find it pretty.",
+   "Bloom meter full. Don't waste it, gremlin.",
+   "You earned a rainbow. [Logging: begrudging respect.]",
+   "A RAINBOW. Aim it somewhere that matters, please."
+  ],
+  rainbow:[
+   "The rainbow did all the work and you're taking the credit. Classic.",
+   "Rainbow pop! Okay, that was satisfying. Don't tell anyone.",
+   "Wildcard deployed. My color sorting algorithm is crying.",
+   "That rainbow went off like a confetti grenade. Again."
+  ],
+  combo:[
+   "Combo! You found a rhythm. Try not to trip over it.",
+   "Pop, pop, pop. Your aim is on a heater right now.",
+   "Another one?! [Stability report: your streak, unstable. My calm, worse.]",
+   "You're chaining pops like it's nothing. Show-off."
   ]
  },
  boop:{
@@ -1964,6 +1982,7 @@ class ReactionDirector {
   if(game==='wafer'&&event==='pull'&&count%3!==1)return null;
   if(game==='cake'&&event==='land'&&count%3!==1)return null;
   if(game==='malware'&&event==='crash'&&count%2!==1)return null;
+  if(game==='bubble'&&event==='combo'&&data?.combo!==3&&data?.combo%3!==0)return null;
   if(game==='lockscreen'&&event==='wrong'&&count%3!==1)return null;
   // Where Gabu is the opponent, the result is Gabu's own: a player win is Gabu losing (panic), a player loss is Gabu winning (hype).
   // Malware Mayhem counts too: Gabu's antivirus bots are the ones hunting you.
@@ -2001,6 +2020,8 @@ class ReactionDirector {
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
+  else if(game==='bubble'&&event==='bloom'){mood='shock';priority=3;}
+  else if(game==='bubble'&&event==='rainbow'){mood='hype';priority=3;}
   else if(game==='lockscreen'&&event==='wrong'){mood='smug';priority=1;}
   else if(game==='lockscreen'&&event==='last'){mood='smug';priority=3;}
   else if(game==='lockscreen'&&event==='reveal'){mood='shock';priority=3;}
@@ -5912,23 +5933,29 @@ function overlay(ctx, message, sub, hint, accent) {
 
 return {drawCakeTier,drawCakeTower};
 })();
-const {BUBBLE_KINDS,BUBBLE_R,BUBBLE_COLS,BUBBLE_ROWS,BUBBLE_DEATH_ROW,BUBBLE_LEFT,BUBBLE_TOP,BUBBLE_RH,LAUNCH_X,LAUNCH_Y,BUBBLE_PACES,BubbleGame}=(()=>{
+const {BUBBLE_KINDS,BUBBLE_R,BUBBLE_COLS,BUBBLE_ROWS,BUBBLE_DEATH_ROW,BUBBLE_LEFT,BUBBLE_TOP,BUBBLE_RH,LAUNCH_X,LAUNCH_Y,BUBBLE_PACES,BUBBLE_RAINBOW,BLOOM_FULL,BubbleGame}=(()=>{
 /** Bubble Bloom: aim, bounce and pop clusters of three before the bubbles reach the cushion line.
+ * Pops and drops charge the Bloom meter; a full meter loads a rainbow bubble that matches whatever it lands against.
+ * Shots that pop in a row build a combo that multiplies their points.
  * Pure rules: no DOM or Spindle APIs. Rows are offset hex rows; `parity` flips when a row is pushed in.
  */
 const BUBBLE_KINDS = Object.freeze(['heart', 'star', 'fish', 'drop', 'moon', 'flower']);
 // One export per line: the bundler lifts each exported name into the shared scope.
-const BUBBLE_R = 14;
+const BUBBLE_R = 15;
 const BUBBLE_COLS = 10;
 const BUBBLE_ROWS = 12;
-const BUBBLE_DEATH_ROW = 11;
-const BUBBLE_LEFT = 40;
-const BUBBLE_TOP = 60;
+const BUBBLE_DEATH_ROW = 10;
+const BUBBLE_LEFT = 30;
+const BUBBLE_TOP = 76;
 const BUBBLE_RH = BUBBLE_R * Math.sqrt(3);
 const LAUNCH_X = 180;
-const LAUNCH_Y = 356;
+const LAUNCH_Y = 358;
 const BUBBLE_PACES = Object.freeze(['chill', 'normal', 'chaos']);
-const SPEED = 578, MIN_AIM = .2, MAX_AIM = Math.PI - .2;
+// The rainbow bubble's kind number: one past the regular kinds. It only ever rides the launcher, never sits in the grid.
+const BUBBLE_RAINBOW = BUBBLE_KINDS.length;
+const BLOOM_FULL = 24;
+const EFFECT_LIFE = Object.freeze({ pop: .45, fall: 1.4, points: .9, callout: 1.3 });
+const SPEED = 619, MIN_AIM = .2, MAX_AIM = Math.PI - .2, COMBO_MAX = 3;
 // Pace changes real board colors and how many misses the ceiling forgives.
 const PACE = Object.freeze({ chill: { kinds: -1, shots: 2 }, normal: { kinds: 0, shots: 0 }, chaos: { kinds: 1, shots: -1 } });
 const pace = value => BUBBLE_PACES.includes(value) ? value : 'normal';
@@ -5941,12 +5968,12 @@ class BubbleGame {
   }
   reset(chosen = this.pace) {
     this.pace = pace(chosen); this.status = 'idle'; this.score = 0; this.level = 1; this.aim = Math.PI / 2; this.endReason = null;
-    this.effects = []; this.shot = null; this.onEvent('reset'); this.deal();
+    this.effects = []; this.shot = null; this.bloom = 0; this.combo = 0; this.onEvent('reset'); this.deal();
   }
   /** A fresh board: more rows and more colors as levels climb, capped so it stays readable. */
   deal() {
     this.grid = Array.from({ length: BUBBLE_ROWS }, () => Array(BUBBLE_COLS).fill(-1)); this.parity = 0; this.misses = 0; this.shot = null;
-    const kinds = this.kindCount(), rows = Math.min(7, 4 + Math.floor((this.level - 1) / 2));
+    const kinds = this.kindCount(), rows = Math.min(6, 4 + Math.floor((this.level - 1) / 2));
     for (let r = 0; r < rows; r++) for (let c = 0; c < this.colsIn(r); c++) this.grid[r][c] = Math.floor(unit(this.random) * kinds);
     this.current = this.pickKind(); this.next = this.pickKind();
   }
@@ -5985,7 +6012,7 @@ class BubbleGame {
   fire() {
     if (this.status === 'idle') { this.start(); return false; }
     if (this.status !== 'playing' || this.shot) return false;
-    this.shot = { x: LAUNCH_X, y: LAUNCH_Y, vx: Math.cos(this.aim) * SPEED, vy: -Math.sin(this.aim) * SPEED, kind: this.current };
+    this.shot = { x: LAUNCH_X, y: LAUNCH_Y, vx: Math.cos(this.aim) * SPEED, vy: -Math.sin(this.aim) * SPEED, kind: this.current, trail: [] };
     this.current = this.next; this.next = this.pickKind(); this.onEvent('shoot'); return true;
   }
   /** Nearest empty cell that is attached to the ceiling or to another bubble. */
@@ -6011,12 +6038,23 @@ class BubbleGame {
     }
     return out;
   }
+  /** A rainbow takes the kind that makes the biggest group where it lands. Against the bare ceiling it takes any kind on the board. */
+  rainbowKind(r, c) {
+    let best = -1, size = 0;
+    for (const k of new Set(this.neighbors(r, c).map(([nr, nc]) => this.grid[nr][nc]).filter(k => k >= 0))) {
+      this.grid[r][c] = k; const n = this.cluster(r, c).length; if (n > size) { size = n; best = k; }
+    }
+    this.grid[r][c] = -1;
+    return best >= 0 ? best : this.pickKind();
+  }
   settle(kind) {
     const cell = this.snapCell(this.shot.x, this.shot.y); this.shot = null;
     if (!cell) { this.finish(); return; }
-    const [r, c] = cell; this.grid[r][c] = kind;
+    const [r, c] = cell, rainbow = kind === BUBBLE_RAINBOW;
+    this.grid[r][c] = rainbow ? this.rainbowKind(r, c) : kind;
     const group = this.cluster(r, c);
-    if (group.length >= 3) {
+    // A rainbow pops anything it touches; a plain bubble needs three of a kind.
+    if (group.length >= 3 || rainbow && group.length >= 2) {
       for (const [gr, gc] of group) { const p = this.center(gr, gc); this.effects.push({ type: 'pop', x: p.x, y: p.y, kind: this.grid[gr][gc], age: 0 }); this.grid[gr][gc] = -1; }
       const anchored = new Set();
       for (let gc = 0; gc < this.colsIn(0); gc++) if (this.grid[0][gc] >= 0) for (const [ar, ac] of this.cluster(0, gc, false)) anchored.add(ar * BUBBLE_COLS + ac);
@@ -6026,20 +6064,38 @@ class BubbleGame {
         const p = this.center(fr, fc); this.effects.push({ type: 'fall', x: p.x, y: p.y, vy: -40 - unit(this.random) * 80, kind: this.grid[fr][fc], age: 0 });
         this.grid[fr][fc] = -1; dropped++;
       }
-      const earned = group.length * 10 + dropped * 20 * (1 + Math.floor(dropped / 4));
+      // Pops in a row multiply: x1.25 for the second, x1.5 for the third, up to x3. A rainbow doubles its own pop.
+      this.combo++;
+      const multiplier = Math.min(COMBO_MAX, 1 + (this.combo - 1) * .25) * (rainbow ? 2 : 1);
+      const earned = Math.round((group.length * 10 + dropped * 20 * (1 + Math.floor(dropped / 4))) * multiplier);
+      const at = this.center(r, c);
+      this.effects.push({ type: 'points', x: at.x, y: at.y, text: `+${earned}`, age: 0 });
       this.score = Math.min(999999999, this.score + earned); this.onEvent('score', { score: this.score, earned });
       this.onEvent(dropped >= 4 ? 'avalanche' : group.length >= 6 ? 'big_pop' : 'pop', { popped: group.length, dropped });
+      if (rainbow) this.onEvent('rainbow', { popped: group.length, earned });
+      if (this.combo >= 3) { this.effects.push({ type: 'callout', text: `COMBO \u00d7${this.combo}`, age: 0 }); this.onEvent('combo', { combo: this.combo }); }
+      this.charge(group.length + dropped * 2);
       if (this.grid.every(row => row.every(k => k < 0))) {
         const bonus = 250 * this.level; this.score = Math.min(999999999, this.score + bonus); this.level++;
+        this.effects.push({ type: 'callout', text: 'FIELD CLEARED!', age: 0 });
         this.onEvent('score', { score: this.score, earned: bonus }); this.onEvent('clear', { level: this.level }); this.deal(); return;
       }
-      if (![this.current, this.next].every(k => this.grid.flat().includes(k))) { this.current = this.pickKind(); this.next = this.pickKind(); }
+      // Keep the launcher winnable, but never take away a rainbow that is waiting.
+      for (const slot of ['current', 'next']) if (this[slot] !== BUBBLE_RAINBOW && !this.grid.flat().includes(this[slot])) this[slot] = this.pickKind();
     } else {
-      this.misses++;
+      this.misses++; this.combo = 0;
       this.onEvent('miss', { misses: this.misses, left: this.shotsPerRow() - this.misses });
       if (this.misses >= this.shotsPerRow()) this.pushRow();
     }
     if (this.grid[BUBBLE_DEATH_ROW].some(k => k >= 0)) this.finish();
+  }
+  /** Pops and drops fill the Bloom meter. When it fills, the next bubble in the launcher becomes a rainbow. */
+  charge(amount) {
+    if (this.current === BUBBLE_RAINBOW || this.next === BUBBLE_RAINBOW) return;
+    this.bloom = Math.min(BLOOM_FULL, this.bloom + amount);
+    if (this.bloom < BLOOM_FULL) return;
+    this.bloom = 0; this.next = BUBBLE_RAINBOW;
+    this.effects.push({ type: 'callout', text: 'RAINBOW READY!', age: 0 }); this.onEvent('bloom');
   }
   /** Too many misses: every row slides down one and a new row arrives at the top. */
   pushRow() {
@@ -6058,11 +6114,12 @@ class BubbleGame {
     if (!Number.isFinite(delta) || delta <= 0) return;
     const dt = Math.min(delta, .12);
     for (const e of this.effects) { e.age += dt; if (e.type === 'fall') { e.vy += 900 * dt; e.y += e.vy * dt; } }
-    this.effects = this.effects.filter(e => e.age < (e.type === 'pop' ? .35 : 1.4));
+    this.effects = this.effects.filter(e => e.age < EFFECT_LIFE[e.type]);
     if (this.status !== 'playing' || !this.shot) return;
     const s = this.shot, steps = Math.ceil(SPEED * dt / 4);
     for (let i = 0; i < steps && this.shot; i++) {
       s.x += s.vx * dt / steps; s.y += s.vy * dt / steps;
+      if (i % 2 === 0) { s.trail.push({ x: s.x, y: s.y }); if (s.trail.length > 8) s.trail.shift(); }
       if (s.x < BUBBLE_LEFT + BUBBLE_R) { s.x = 2 * (BUBBLE_LEFT + BUBBLE_R) - s.x; s.vx = Math.abs(s.vx); this.onEvent('bounce'); }
       if (s.x > BUBBLE_LEFT + BUBBLE_COLS * BUBBLE_R * 2 - BUBBLE_R) { s.x = 2 * (BUBBLE_LEFT + BUBBLE_COLS * BUBBLE_R * 2 - BUBBLE_R) - s.x; s.vx = -Math.abs(s.vx); this.onEvent('bounce'); }
       let touching = s.y <= BUBBLE_TOP + BUBBLE_R;
@@ -6078,33 +6135,40 @@ class BubbleGame {
   snapshot() {
     return { version: 1, grid: this.grid.map(row => [...row]), parity: this.parity, level: this.level, score: this.score, misses: this.misses,
       current: this.shot ? this.shot.kind : this.current, next: this.shot ? this.current : this.next, aim: Math.round(this.aim * 1000) / 1000,
-      endReason: this.endReason, pace: this.pace, status: this.status === 'playing' ? 'paused' : this.status };
+      bloom: this.bloom, endReason: this.endReason, pace: this.pace, status: this.status === 'playing' ? 'paused' : this.status };
   }
   restore(data) {
     if (!data || data.version !== 1 || !Array.isArray(data.grid) || data.grid.length !== BUBBLE_ROWS || ![0, 1].includes(data.parity) ||
       data.grid.some(row => !Array.isArray(row) || row.length !== BUBBLE_COLS || row.some(k => !Number.isInteger(k) || k < -1 || k >= BUBBLE_KINDS.length)) ||
       !whole(data.level, 100000) || data.level < 1 || !whole(data.score, 999999999) || !whole(data.misses, 7) ||
-      !whole(data.current, BUBBLE_KINDS.length - 1) || !whole(data.next, BUBBLE_KINDS.length - 1) || !Number.isFinite(data.aim) ||
+      !whole(data.current, BUBBLE_RAINBOW) || !whole(data.next, BUBBLE_RAINBOW) || data.current === BUBBLE_RAINBOW && data.next === BUBBLE_RAINBOW ||
+      !(data.bloom === undefined || whole(data.bloom, BLOOM_FULL - 1)) || !Number.isFinite(data.aim) ||
       !['idle', 'paused', 'playing', 'dead'].includes(data.status)) return false;
     const savedPace = data.pace === undefined ? 'normal' : data.pace;
     if (!BUBBLE_PACES.includes(savedPace)) return false;
     this.parity = data.parity; this.pace = savedPace;
     if (data.grid.some((row, r) => this.indented(r) && row[BUBBLE_COLS - 1] !== -1)) return false;
-    const dead = data.grid[BUBBLE_DEATH_ROW].some(k => k >= 0);
-    if (dead !== (data.status === 'dead')) return false;
+    // Anything on or past the cushion line ends the run. A run saved before the line moved up a row and already past it
+    // comes back finished rather than refused.
+    const dead = data.grid.slice(BUBBLE_DEATH_ROW).some(row => row.some(k => k >= 0));
+    if (data.status === 'dead' && !dead) return false;
     this.grid = data.grid.map(row => [...row]); this.level = data.level; this.score = data.score; this.misses = Math.min(data.misses, this.shotsPerRow() - 1);
     this.current = data.current; this.next = data.next; this.aim = Math.max(MIN_AIM, Math.min(MAX_AIM, data.aim));
-    this.endReason = dead ? 'line' : null; this.shot = null; this.effects = [];
-    this.status = data.status === 'playing' ? 'paused' : data.status; return true;
+    this.bloom = data.bloom || 0; this.combo = 0; this.endReason = dead ? 'line' : null; this.shot = null; this.effects = [];
+    this.status = dead ? 'dead' : data.status === 'playing' ? 'paused' : data.status; return true;
   }
 }
 
-return {BUBBLE_KINDS,BUBBLE_R,BUBBLE_COLS,BUBBLE_ROWS,BUBBLE_DEATH_ROW,BUBBLE_LEFT,BUBBLE_TOP,BUBBLE_RH,LAUNCH_X,LAUNCH_Y,BUBBLE_PACES,BubbleGame};
+return {BUBBLE_KINDS,BUBBLE_R,BUBBLE_COLS,BUBBLE_ROWS,BUBBLE_DEATH_ROW,BUBBLE_LEFT,BUBBLE_TOP,BUBBLE_RH,LAUNCH_X,LAUNCH_Y,BUBBLE_PACES,BUBBLE_RAINBOW,BLOOM_FULL,BubbleGame};
 })();
 const {drawBubble,drawBubbleBloom}=(()=>{
-/** Bubble Bloom canvas: glossy symbol bubbles, a cloud launcher, and a dotted aim guide with one bounce. */
+/** Bubble Bloom canvas: glossy symbol bubbles in one framed field, a cloud launcher, a dotted aim guide with one bounce,
+ * and the Bloom meter that charges toward a rainbow bubble. */
 
 const W = 360, H = 452, RIGHT = BUBBLE_LEFT + BUBBLE_COLS * BUBBLE_R * 2;
+// The framed field: everything the game shows sits inside it, so nothing hangs off the sides.
+const PANEL = Object.freeze({ x: 14, y: 50, w: 332, h: 338 });
+const RAINBOW = Object.freeze(['#ff7fae', '#ffcf5a', '#79d897', '#5fd3e3', '#7f97ff', '#b49cf2']);
 const TINTS = Object.freeze({
   heart: ['#ffc2d8', '#ff7fae', '#c94a7d'], star: ['#fff1b8', '#ffcf5a', '#c48a1c'], fish: ['#c8f6fb', '#5fd3e3', '#2a8fa0'],
   drop: ['#e6dcff', '#b49cf2', '#6f58b8'], moon: ['#d4ddff', '#7f97ff', '#3f50b8'], flower: ['#d4f8dc', '#79d897', '#2f8a4f'],
@@ -6125,8 +6189,18 @@ function symbol(ctx, kind, s) {
   if (kind === 'flower') { ctx.beginPath(); ctx.arc(0, 0, s * .26, 0, Math.PI * 2); ctx.fillStyle = '#ffe08a'; ctx.fill(); }
   if (kind === 'fish') { ctx.beginPath(); ctx.arc(-s * .42, -s * .08, s * .09, 0, Math.PI * 2); ctx.fillStyle = TINTS.fish[2]; ctx.fill(); }
 }
+/** The rainbow bubble: six colored slices under the same gloss, with a white star in the middle. */
+function drawRainbow(ctx, x, y, r, alpha) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y);
+  RAINBOW.forEach((color, i) => { const a = -Math.PI / 2 + i * Math.PI / 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r - .8, a, a + Math.PI / 3); ctx.closePath(); ctx.fillStyle = color; ctx.fill(); });
+  ctx.beginPath(); ctx.arc(0, 0, r - .8, 0, Math.PI * 2); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.fillStyle = '#ffffff'; symbol(ctx, 'star', r * .5);
+  ctx.globalAlpha = alpha * .6; ctx.beginPath(); ctx.ellipse(-r * .42, -r * .48, r * .26, r * .14, -.6, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
 /** A glossy bubble. The symbol, not just the color, says what it is. */
 function drawBubble(ctx, kindIndex, x, y, r = BUBBLE_R, alpha = 1) {
+  if (kindIndex === BUBBLE_RAINBOW) { drawRainbow(ctx, x, y, r, alpha); return; }
   const kind = BUBBLE_KINDS[kindIndex], tint = TINTS[kind]; if (!tint) return;
   ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y);
   const fill = ctx.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r); fill.addColorStop(0, tint[0]); fill.addColorStop(.7, tint[1]); fill.addColorStop(1, tint[2]);
@@ -6152,7 +6226,7 @@ function aimGuide(ctx, game) {
 }
 function launcher(ctx, game) {
   // A sleepy little cloud launcher; the loaded bubble rests on top of it.
-  ctx.save(); ctx.translate(LAUNCH_X, LAUNCH_Y + 16);
+  ctx.save(); ctx.translate(LAUNCH_X, LAUNCH_Y + 13); ctx.scale(.85, .85);
   // Overlapping puffs, mirrored on a flat base so the cloud sits level. The outline is drawn as a slightly larger copy
   // underneath, so it traces the outside of the puffs without seams where they meet.
   const puffs = [[-18, 2, 10], [-8, -6, 11], [8, -6, 11], [18, 2, 10], [0, 1, 12]];
@@ -6165,48 +6239,92 @@ function launcher(ctx, game) {
   ctx.fillStyle = '#ffb3cf'; ctx.globalAlpha = .7; ctx.beginPath(); ctx.ellipse(-13, 7, 3.4, 2, 0, 0, Math.PI * 2); ctx.ellipse(13, 7, 3.4, 2, 0, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
   ctx.save(); ctx.translate(LAUNCH_X, LAUNCH_Y); ctx.rotate(-game.aim + Math.PI / 2);
-  rounded(ctx, -3, -30, 6, 12, 3, '#ffffffcc'); ctx.restore();
+  rounded(ctx, -3, -32, 6, 12, 3, '#ffffffcc'); ctx.restore();
   if (!game.shot) drawBubble(ctx, game.current, LAUNCH_X, LAUNCH_Y);
 }
-function drawBubbleBloom(canvas, game, { best = 0 } = {}) {
+/** Pops burst into a ring and sparks in the bubble's color; points and callouts float up and fade. */
+function effects(ctx, game, reduced) {
+  for (const e of game.effects) {
+    if (e.type === 'pop') {
+      const t = e.age / .45, tint = TINTS[BUBBLE_KINDS[e.kind]] || TINTS.heart;
+      ctx.save(); ctx.globalAlpha = 1 - t; ctx.strokeStyle = tint[1]; ctx.lineWidth = 2.4 * (1 - t) + .6;
+      ctx.beginPath(); ctx.arc(e.x, e.y, BUBBLE_R * (.7 + t * .9), 0, Math.PI * 2); ctx.stroke();
+      if (!reduced) for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4 + e.x * .1, d = BUBBLE_R * (.8 + t * 1.6);
+        ctx.beginPath(); ctx.arc(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, 2.2 * (1 - t) + .4, 0, Math.PI * 2); ctx.fillStyle = i % 2 ? tint[0] : '#ffffff'; ctx.fill();
+      }
+      ctx.restore();
+    } else if (e.type === 'fall') drawBubble(ctx, e.kind, e.x, e.y, BUBBLE_R, Math.max(0, 1 - e.age / 1.4));
+    else if (e.type === 'points') {
+      const t = e.age / .9; ctx.save(); ctx.globalAlpha = 1 - t * t;
+      drawTxt(ctx, e.text, e.x, e.y - 8 - (reduced ? 0 : t * 26), 12, '#ffe08a', 'center'); ctx.restore();
+    }
+  }
+  // Only the newest callout shows, centered over the field.
+  const call = [...game.effects].reverse().find(e => e.type === 'callout');
+  if (call) {
+    const t = call.age / 1.3, grow = reduced ? 1 : Math.min(1, .7 + call.age * 2);
+    ctx.save(); ctx.globalAlpha = Math.min(1, (1 - t) * 3); ctx.translate(180, 214); ctx.scale(grow, grow);
+    rounded(ctx, -92, -20, 184, 34, 17, '#1a1230d0');
+    drawTxt(ctx, call.text, 0, 3, 17, call.text.startsWith('RAINBOW') ? '#9be7ff' : '#ffe08a', 'center'); ctx.restore();
+  }
+}
+function drawBubbleBloom(canvas, game, { best = 0, reduced = false, time = 0 } = {}) {
   if (!canvas?.getContext) return; const ctx = canvas.getContext('2d'); if (!ctx) return;
   ctx.save(); ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
-  const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#2a1d44'); bg.addColorStop(1, '#1a1428'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#2a1d44'); bg.addColorStop(1, '#150f22'); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // Faint bubbles drift up behind everything. They hold still with reduced motion.
+  for (let i = 0; i < 14; i++) {
+    const rise = reduced ? 0 : time * (6 + i % 4 * 3), y = H - ((i * 97 + rise) % (H + 40)) + 20, x = (i * 71 + 17) % W;
+    ctx.beginPath(); ctx.arc(x, y, 3 + i % 4, 0, Math.PI * 2); ctx.strokeStyle = '#ffffff14'; ctx.lineWidth = 1; ctx.stroke();
+  }
   drawBubble(ctx, 5, 26, 25, 10);
   drawTxt(ctx, 'BUBBLE BLOOM', 42, 31, 12, '#ffe6ef');
-  drawTxt(ctx, `SCORE ${game.score}`, 188, 31, 11, '#fdfaf7', 'center');
+  drawTxt(ctx, `SCORE ${game.score}`, 196, 31, 11, '#fdfaf7', 'center');
   drawTxt(ctx, `BEST ${Math.max(best, game.score)}`, 342, 31, 11, '#ead4c4', 'right');
   rounded(ctx, 20, 45, 320, 1, 0, '#45365c');
-  const field = ctx.createLinearGradient(0, BUBBLE_TOP, 0, 400); field.addColorStop(0, '#3a2a5a'); field.addColorStop(1, '#2b2045');
-  rounded(ctx, BUBBLE_LEFT - 6, BUBBLE_TOP - 18, RIGHT - BUBBLE_LEFT + 12, H - BUBBLE_TOP + 4, 14, field);
-  for (let i = 0; i < 16; i++) { ctx.fillStyle = '#ffffff0f'; ctx.beginPath(); ctx.arc(30 + (i * 67) % 300, 90 + (i * 113) % 300, 3 + i % 4, 0, Math.PI * 2); ctx.fill(); }
-  drawTxt(ctx, `LEVEL ${game.level}  ·  ${String(game.pace).toUpperCase()}`, 26, BUBBLE_TOP - 5, 9, '#cfc4ea');
-  const shots = game.shotsPerRow(), left = shots - game.misses, firstDot = 334 - (shots - 1) * 11;
-  drawTxt(ctx, 'NEW ROW IN', firstDot - 10, BUBBLE_TOP - 5, 9, '#cfc4ea', 'right');
-  for (let i = 0; i < shots; i++) { ctx.beginPath(); ctx.arc(firstDot + i * 11, BUBBLE_TOP - 8, 4, 0, Math.PI * 2); ctx.fillStyle = i < left ? '#ffb3cf' : '#ffffff22'; ctx.fill(); }
-  const dangerY = BUBBLE_TOP + BUBBLE_R + (BUBBLE_DEATH_ROW - .5) * BUBBLE_RH, low = game.lowestRow();
-  ctx.strokeStyle = low >= BUBBLE_DEATH_ROW - 2 ? '#ff5d8f' : '#ffb3cf66'; ctx.lineWidth = 2; ctx.setLineDash([5, 6]);
+  // The field: one framed panel with a neon rim. The rim and the cushion line warm to red as the bubbles close in.
+  const low = game.lowestRow(), danger = low >= BUBBLE_DEATH_ROW - 2;
+  const field = ctx.createLinearGradient(0, PANEL.y, 0, PANEL.y + PANEL.h); field.addColorStop(0, '#3a2a5c'); field.addColorStop(1, '#22193a');
+  ctx.save(); ctx.shadowColor = danger ? '#ff5d8f' : '#b49cf2'; ctx.shadowBlur = reduced ? 0 : 12;
+  rounded(ctx, PANEL.x, PANEL.y, PANEL.w, PANEL.h, 18, danger ? '#ff5d8f' : '#8f7bd6'); ctx.restore();
+  rounded(ctx, PANEL.x + 2, PANEL.y + 2, PANEL.w - 4, PANEL.h - 4, 16, field);
+  rounded(ctx, PANEL.x + 2, PANEL.y + 2, PANEL.w - 4, 22, 16, '#00000030');
+  drawTxt(ctx, `LEVEL ${game.level}  ·  ${String(game.pace).toUpperCase()}`, 28, 67, 9, '#cfc4ea');
+  const shots = game.shotsPerRow(), left = shots - game.misses, firstDot = 332 - (shots - 1) * 11;
+  drawTxt(ctx, 'NEW ROW IN', firstDot - 10, 67, 9, '#cfc4ea', 'right');
+  for (let i = 0; i < shots; i++) { ctx.beginPath(); ctx.arc(firstDot + i * 11, 64, 4, 0, Math.PI * 2); ctx.fillStyle = i < left ? '#ffb3cf' : '#ffffff22'; ctx.fill(); }
+  const dangerY = BUBBLE_TOP + BUBBLE_R + (BUBBLE_DEATH_ROW - .5) * BUBBLE_RH;
+  ctx.strokeStyle = danger ? '#ff5d8f' : '#ffb3cf66'; ctx.lineWidth = 2; ctx.setLineDash([5, 6]);
   ctx.beginPath(); ctx.moveTo(BUBBLE_LEFT, dangerY); ctx.lineTo(RIGHT, dangerY); ctx.stroke(); ctx.setLineDash([]);
   for (let r = 0; r < BUBBLE_ROWS; r++) for (let c = 0; c < BUBBLE_COLS; c++) {
     const k = game.grid[r][c]; if (k < 0) continue; const p = game.center(r, c);
     drawBubble(ctx, k, p.x, p.y);
   }
-  for (const e of game.effects) {
-    if (e.type === 'pop') {
-      const t = e.age / .35; ctx.save(); ctx.globalAlpha = 1 - t; ctx.strokeStyle = TINTS[BUBBLE_KINDS[e.kind]][1]; ctx.lineWidth = 2;
-      for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, d = BUBBLE_R * (.6 + t); ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * d * .6, e.y + Math.sin(a) * d * .6); ctx.lineTo(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d); ctx.stroke(); }
-      ctx.restore();
-    } else drawBubble(ctx, e.kind, e.x, e.y, BUBBLE_R, Math.max(0, 1 - e.age / 1.4));
-  }
   if (game.status === 'playing' && !game.shot) aimGuide(ctx, game);
-  if (game.shot) drawBubble(ctx, game.shot.kind, game.shot.x, game.shot.y);
+  if (game.shot) {
+    const s = game.shot;
+    // A soft streak of small dots in the bubble's color trails the shot.
+    const streak = s.kind === BUBBLE_RAINBOW ? '#ffffff' : (TINTS[BUBBLE_KINDS[s.kind]] || TINTS.heart)[0];
+    if (!reduced) s.trail.forEach((p, i) => { const t = (i + 1) / s.trail.length; ctx.globalAlpha = t * .45; ctx.beginPath(); ctx.arc(p.x, p.y, 2 + t * 4, 0, Math.PI * 2); ctx.fillStyle = streak; ctx.fill(); });
+    ctx.globalAlpha = 1; drawBubble(ctx, s.kind, s.x, s.y);
+  }
+  effects(ctx, game, reduced);
   launcher(ctx, game);
-  // The launcher and the next bubble sit above the footer, so Gabu's line can cover only the hints, as in Kitty's games.
-  rounded(ctx, 40, 340, 66, 32, 10, '#3f2f60'); drawTxt(ctx, 'NEXT', 48, 360, 8, '#cfc4ea'); drawBubble(ctx, game.next, 89, 356, 10);
-  drawTxt(ctx, 'DRAG OR ARROWS TO AIM', 326, 413, 8, '#bfb3d8', 'right'); drawTxt(ctx, 'RELEASE / SPACE · C SWAPS', 326, 427, 8, '#bfb3d8', 'right');
+  // Under the cushion line: the next bubble on the left and the Bloom meter on the right, both inside the field.
+  rounded(ctx, 26, 348, 64, 30, 10, '#ffffff12'); drawTxt(ctx, 'NEXT', 34, 367, 8, '#cfc4ea'); drawBubble(ctx, game.next, 73, 363, 10);
+  const ready = game.current === BUBBLE_RAINBOW || game.next === BUBBLE_RAINBOW, charge = ready ? 1 : game.bloom / BLOOM_FULL;
+  drawTxt(ctx, ready ? 'RAINBOW!' : 'BLOOM', 334, 360, 8, ready ? '#9be7ff' : '#cfc4ea', 'right');
+  rounded(ctx, 252, 366, 82, 8, 4, '#ffffff18');
+  if (charge > 0) {
+    const fill = ctx.createLinearGradient(252, 0, 334, 0); RAINBOW.forEach((color, i) => fill.addColorStop(i / (RAINBOW.length - 1), color));
+    rounded(ctx, 252, 366, Math.max(8, 82 * charge), 8, 4, fill);
+  }
+  drawTxt(ctx, 'DRAG OR ARROWS TO AIM  ·  RELEASE OR SPACE  ·  C SWAPS', 180, 410, 8, '#bfb3d8', 'center');
+  drawTxt(ctx, 'POP AND DROP TO FILL THE BLOOM METER FOR A RAINBOW', 180, 424, 8, '#a99bc2', 'center');
   if (game.status === 'dead') overlay(ctx, 'BUBBLE OVERFLOW', `Level ${game.level} · ${game.score} points`, 'PRESS PLAY TO POP AGAIN', '#ff8fb8');
   else if (game.status === 'paused') overlay(ctx, 'PAUSED', 'The bubbles are holding their breath.', 'PRESS PLAY TO RESUME', '#b8a7ff');
-  else if (game.status === 'idle') overlay(ctx, 'BUBBLE BLOOM', 'Match three of a kind. Pop what holds the rest up.', 'PRESS PLAY OR TAP TO START', '#7f97ff');
+  else if (game.status === 'idle') overlay(ctx, 'BUBBLE BLOOM', 'Match three. Fill the Bloom meter for a rainbow.', 'PRESS PLAY OR TAP TO START', '#7f97ff');
   ctx.restore();
 }
 function overlay(ctx, message, sub, hint, accent) {
@@ -10200,7 +10318,7 @@ export function setup(ctx) {
     berry:{drop:'drop',gabu_drop:'drop',block:'coin',fork:'score',draw:'hit',round:'start'},
     tictac:{place:'tick',gabu_place:'tick',block:'coin',draw:'hit',round:'start'},
     cake:{drop:'flap',land:'drop',perfect:'coin',combo:'score',milestone:'score',miss:'hit',wobble:'tick'},
-    bubble:{shoot:'thrust',bounce:'tick',pop:'pop',big_pop:'score',avalanche:'score',miss:'drop',ceiling:'hit',clear:'score',swap:'flap'},
+    bubble:{shoot:'thrust',bounce:'tick',pop:'pop',big_pop:'score',avalanche:'score',miss:'drop',ceiling:'hit',clear:'score',swap:'flap',bloom:'coin',rainbow:'score'},
     boop:{boop:'pop',gold:'coin',combo:'score',bot:'hit',whiff:'tick'},
     wafer:{select:'tick',pull:'drop',gabu_pull:'drop',perfect:'coin',risky:'hit',gabu_risky:'hit',round:'start'},
     memory:{flip:'tick',match:'coin',streak:'score',miss:'drop',forgot:'hit'},
@@ -11093,7 +11211,7 @@ export function setup(ctx) {
     tip(cakeInfo,'Tap, Space, Enter or Down drops the swinging tier. Land it dead center for a PERFECT that steadies the tower and builds a streak; sloppy drops make it wobble. A tier only stays if its middle sits over the tier below; a wobbly cake is harder to aim at. Each missed tier costs one of three hearts. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('cake',makeSelect(cakeInfo,'Swing pace','Chill swings slower with a wider perfect window; Chaos swings faster with a tighter one. Changes apply to your next cake.',TOY_PACES.cake,toyPaces.cake,'Cake Tower pace',v=>{toyPaces.cake=v;saveNow();refresh();}));
     const bubbleInfo=drawerGamePanel('bubble');
-    tip(bubbleInfo,'Drag to aim and release to shoot, or aim with Left/Right and shoot with Space. C swaps in the next bubble. Three or more of a kind pop, and anything left hanging falls for bonus points. Every few misses a new row pushes down; a bubble past the dashed line ends the run. Clear the board to level up. Every 300 new personal-best points earns a ticket.');
+    tip(bubbleInfo,'Drag to aim and release to shoot, or aim with Left/Right and shoot with Space. C swaps in the next bubble. Three or more of a kind pop, and anything left hanging falls for bonus points. Shots that pop in a row build a combo worth up to three times the points. Pops and drops fill the Bloom meter; when it fills, your next bubble is a rainbow that matches whatever it lands against, for double points. Every few misses a new row pushes down; a bubble past the dashed line ends the run. Clear the board to level up. Every 300 new personal-best points earns a ticket.');
     presetSelects.set('bubble',makeSelect(bubbleInfo,'Board difficulty','Chill uses fewer colors and forgives more misses; Chaos adds a color and pushes rows sooner. Changes apply to your next run.',TOY_PACES.bubble,toyPaces.bubble,'Bubble Bloom difficulty',v=>{toyPaces.bubble=v;saveNow();refresh();}));
     const boopInfo=drawerGamePanel('boop');
     tip(boopInfo,'Bunnies pop out of the nine burrows; boop them before they duck back down. Golden bunnies are worth 50 and every five-boop streak adds a bonus. Gabu\u2019s little robots are decoys: booping one costs 20 points and your streak. Tap a burrow, press 1\u20139 (top-left to bottom-right), or move with the arrows and boop with Space. Rounds last 45 seconds. Every 100 new personal-best points earns a ticket.');

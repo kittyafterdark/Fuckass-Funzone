@@ -779,6 +779,24 @@ const SAYINGS=Object.freeze({
    "They reached the bottom! Too many misses, protagonist. WAY too many.",
    "Overflow! I'm drowning in your bad aim!",
    "Bubbles win. You lose. I need to go pop something to cope."
+  ],
+  bloom:[
+   "Rainbow loaded. I hate that I find it pretty.",
+   "Bloom meter full. Don't waste it, gremlin.",
+   "You earned a rainbow. [Logging: begrudging respect.]",
+   "A RAINBOW. Aim it somewhere that matters, please."
+  ],
+  rainbow:[
+   "The rainbow did all the work and you're taking the credit. Classic.",
+   "Rainbow pop! Okay, that was satisfying. Don't tell anyone.",
+   "Wildcard deployed. My color sorting algorithm is crying.",
+   "That rainbow went off like a confetti grenade. Again."
+  ],
+  combo:[
+   "Combo! You found a rhythm. Try not to trip over it.",
+   "Pop, pop, pop. Your aim is on a heater right now.",
+   "Another one?! [Stability report: your streak, unstable. My calm, worse.]",
+   "You're chaining pops like it's nothing. Show-off."
   ]
  },
  boop:{
@@ -1082,6 +1100,7 @@ export class ReactionDirector {
   if(game==='wafer'&&event==='pull'&&count%3!==1)return null;
   if(game==='cake'&&event==='land'&&count%3!==1)return null;
   if(game==='malware'&&event==='crash'&&count%2!==1)return null;
+  if(game==='bubble'&&event==='combo'&&data?.combo!==3&&data?.combo%3!==0)return null;
   if(game==='lockscreen'&&event==='wrong'&&count%3!==1)return null;
   // Where Gabu is the opponent, the result is Gabu's own: a player win is Gabu losing (panic), a player loss is Gabu winning (hype).
   // Malware Mayhem counts too: Gabu's antivirus bots are the ones hunting you.
@@ -1119,6 +1138,8 @@ export class ReactionDirector {
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
+  else if(game==='bubble'&&event==='bloom'){mood='shock';priority=3;}
+  else if(game==='bubble'&&event==='rainbow'){mood='hype';priority=3;}
   else if(game==='lockscreen'&&event==='wrong'){mood='smug';priority=1;}
   else if(game==='lockscreen'&&event==='last'){mood='smug';priority=3;}
   else if(game==='lockscreen'&&event==='reveal'){mood='shock';priority=3;}
