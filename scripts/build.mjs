@@ -46,7 +46,7 @@ const classicModules=[
   ['boop', 'BoopGame, BOOP_PACES'],['boop-render', 'drawBoopABun, boopHoleAt'],
   ['wafer', 'WobblyWafersGame'],['wafer-render', 'drawWobblyWafers, waferAt'],
   ['memory', 'GachaMatchGame, MEMORY_SIZES'],['memory-render', 'drawGachaMatch, capsuleAt'],
-  ['malware', 'MalwareMayhemGame, MALWARE_PACES'],['malware-render', 'drawMalwareMayhem, malwareSwipe, malwareDrag'],
+  ['malware', 'MalwareMayhemGame, MALWARE_PACES'],['malware-render', 'drawMalwareMayhem, malwareSwipe, malwareStroke'],
   ['sugar', 'SugarSnapGame, SUGAR_PACES'],['sugar-render', 'drawSugarSnap'],
   ['lockscreen', 'LockscreenGame, LOCK_PACES, LOCK_LETTERS'],['lockscreen-render', 'drawLockscreen, lockKeyAt'],
 ];

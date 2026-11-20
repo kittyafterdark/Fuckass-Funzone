@@ -36,7 +36,7 @@ import { drawWobblyWafers, waferAt } from './wafer-render.js';
 import { GachaMatchGame, MEMORY_SIZES } from './memory.js';
 import { drawGachaMatch, capsuleAt } from './memory-render.js';
 import { MalwareMayhemGame, MALWARE_PACES } from './malware.js';
-import { drawMalwareMayhem, malwareSwipe, malwareDrag } from './malware-render.js';
+import { drawMalwareMayhem, malwareSwipe, malwareStroke } from './malware-render.js';
 import { SugarSnapGame, SUGAR_PACES } from './sugar.js';
 import { drawSugarSnap } from './sugar-render.js';
 import { LockscreenGame, LOCK_PACES, LOCK_LETTERS } from './lockscreen.js';
@@ -923,7 +923,7 @@ export function setup(ctx) {
     else if(activeMode==='memory'){const card=capsuleAt(x,y,current.cols,current.rows);if(card>=0)current.flip(card);}
     else if(activeMode==='bubble'){current.setAim(x,y);bubbleAiming=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     // Malware Mayhem steers while the finger moves; a press that never moves is a tap toward where it landed.
-    else if(activeMode==='malware'){malwareFrom={x,y,moved:false};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
+    else if(activeMode==='malware'){malwareFrom={x,y,moved:false,dir:null,at:0};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     else if(activeMode==='lockscreen'){if(current.phase==='over')current.nextWord();else{const key=lockKeyAt(x,y);if(key>=0)current.guess(LOCK_LETTERS[key]);}}
     // Sugar Snap carves while the needle is down; after a result, a tap brings the next shape.
     else if(activeMode==='sugar'){if(current.phase==='over')current.nextRound();else{current.press(x,y);sugarCarving=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}}
@@ -1080,8 +1080,8 @@ export function setup(ctx) {
     if(activeMode==='malware'){
       if(!malwareFrom||!canvas)return;
       const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
-      const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=malwareDrag(malwareFrom,to);
-      if(dir){classicGames.malware.steer(dir);malwareFrom={...to,moved:true};}
+      const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=malwareStroke(malwareFrom,to,performance.now());
+      if(dir)classicGames.malware.steer(dir);
       return;
     }
     // Bubble Bloom aims on hover and drag; the other games ignore movement.
@@ -1098,7 +1098,7 @@ export function setup(ctx) {
     }
     if(activeMode==='malware'&&malwareFrom){
       const from=malwareFrom,rect=canvas?.getBoundingClientRect();malwareFrom=null;
-      if(e.type!=='pointercancel'&&rect?.width&&rect?.height){const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=from.moved?malwareDrag(from,to):malwareSwipe(classicGames.malware,from,to);if(dir)classicGames.malware.steer(dir);}
+      if(e.type!=='pointercancel'&&rect?.width&&rect?.height){const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=from.moved?malwareStroke(from,to,performance.now()):malwareSwipe(classicGames.malware,from,to);if(dir)classicGames.malware.steer(dir);}
       try{if(canvas?.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
       flushClassic();save();refresh();pointerStart=null;return;
     }

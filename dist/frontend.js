@@ -7096,6 +7096,8 @@ const PACE = Object.freeze({
 });
 // Cells per second. The virus always outruns a hunting bot, and a corrupted bot is slower still.
 const RUN = 5.2, GLITCHED = 2.6, HEARTS = 3, READY = 1.4, CHARGE = 3, RELEASE = 2.5, CATCH = .6;
+// How far past an opening, in cells, a turn asked for a moment late still takes it, the way arcade mazes let you corner.
+const CORNER = .5;
 const pace = value => MALWARE_PACES.includes(value) ? value : 'normal';
 const unit = random => Math.max(0, Math.min(.999999999, Number(random()) || 0));
 const whole = (value, max) => Number.isSafeInteger(value) && value >= 0 && value <= max;
@@ -7151,6 +7153,9 @@ class MalwareMayhemGame {
     // Turning back is allowed anywhere, even between two cells.
     if (h.moving && h.t > 0 && dir === OPPOSITE[h.dir]) {
       const [dx, dy] = MALWARE_DIRS[h.dir]; h.c += dx; h.r += dy; h.t = 1 - h.t; h.dir = dir;
+    } else if (h.moving && h.t > 0 && h.t <= CORNER && dir !== h.dir && this.open(h.c, h.r, dir)) {
+      // A quick swipe that lands just after an opening still turns there: the virus steps back onto that cell and takes it.
+      h.t = 0; h.dir = dir;
     }
     return true;
   }
@@ -7277,7 +7282,7 @@ class MalwareMayhemGame {
 
 return {MALWARE_MAZE,MALWARE_COLS,MALWARE_ROWS,MALWARE_PACES,MALWARE_DIRS,MalwareMayhemGame};
 })();
-const {malwareLayout,drawVirus,drawAntivirusBot,drawMalwareMayhem,malwareDrag,malwareSwipe}=(()=>{
+const {malwareLayout,drawVirus,drawAntivirusBot,drawMalwareMayhem,malwareStroke,malwareSwipe}=(()=>{
 /** Malware Mayhem canvas: Gabu's mainframe as a neon maze on a monitor, in the arcade's dark cyber palette. */
 
 const W = 360, H = 452, CELL = 20, X0 = (W - MALWARE_COLS * CELL) / 2, Y0 = 62;
@@ -7446,9 +7451,23 @@ function terminal(ctx, message, sub, hint) {
   text(ctx, hint, 180, 258, 9, '#9be7ff', 'center');
 }
 const way = (dx, dy) => Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
-/** One leg of a drag: once the finger has moved far enough from where the last leg ended, the way it went.
- * Steering on every leg, while the finger is still down, follows a finger tracing the corridors turn by turn. */
-function malwareDrag(from, to, min = 9) {
+const BACK = Object.freeze({ up: 'down', down: 'up', left: 'right', right: 'left' });
+/** Follows one finger or mouse stroke. A leg counts once the pointer has moved far enough from where the last leg ended
+ * and clearly more along one axis than the other, so the wobble at the start of a flick never picks the wrong way.
+ * A short slip backwards right after a leg, the way a fingertip rolls as it lifts, is ignored instead of turning the virus round.
+ * Returns the way to steer, or null. `stroke` is { x, y } from the press and is updated as legs are taken. */
+function malwareStroke(stroke, to, time = 0) {
+  if (!stroke || ![stroke.x, stroke.y, to?.x, to?.y].every(Number.isFinite)) return null;
+  const dx = to.x - stroke.x, dy = to.y - stroke.y, along = Math.max(Math.abs(dx), Math.abs(dy)), across = Math.min(Math.abs(dx), Math.abs(dy));
+  if (Math.hypot(dx, dy) < 10 || along < across * 1.3) return null;
+  const dir = way(dx, dy);
+  if (dir === BACK[stroke.dir] && time - stroke.at < 220 && along < 28) return null;
+  Object.assign(stroke, { x: to.x, y: to.y, at: time, moved: true });
+  if (dir === stroke.dir) return null;
+  stroke.dir = dir; return dir;
+}
+/** How a short press went, once it moved at least `min` pixels. */
+function flickWay(from, to, min) {
   if (![from?.x, from?.y, to?.x, to?.y].every(Number.isFinite)) return null;
   const dx = to.x - from.x, dy = to.y - from.y;
   return Math.hypot(dx, dy) < min ? null : way(dx, dy);
@@ -7456,12 +7475,12 @@ function malwareDrag(from, to, min = 9) {
 /** A press that never became a drag: a short flick goes its way, and a tap heads from the virus toward where it landed. */
 function malwareSwipe(game, from, to) {
   if (![from?.x, from?.y, to?.x, to?.y].every(Number.isFinite)) return null;
-  const flick = malwareDrag(from, to, 14); if (flick) return flick;
+  const flick = flickWay(from, to, 14); if (flick) return flick;
   const v = game.position(game.virus), dx = to.x - px(v.x), dy = to.y - py(v.y);
   return Math.hypot(dx, dy) < 6 ? null : way(dx, dy);
 }
 
-return {malwareLayout,drawVirus,drawAntivirusBot,drawMalwareMayhem,malwareDrag,malwareSwipe};
+return {malwareLayout,drawVirus,drawAntivirusBot,drawMalwareMayhem,malwareStroke,malwareSwipe};
 })();
 const {SUGAR_CX,SUGAR_CY,SUGAR_R,SUGAR_PACES,SUGAR_SHAPES,sugarPath,SugarSnapGame}=(()=>{
 /** Sugar Snap: Gabu presses a shape into a disc of honeycomb toffee, and you carve it out with a needle before the timer runs out.
@@ -10556,7 +10575,7 @@ export function setup(ctx) {
     else if(activeMode==='memory'){const card=capsuleAt(x,y,current.cols,current.rows);if(card>=0)current.flip(card);}
     else if(activeMode==='bubble'){current.setAim(x,y);bubbleAiming=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     // Malware Mayhem steers while the finger moves; a press that never moves is a tap toward where it landed.
-    else if(activeMode==='malware'){malwareFrom={x,y,moved:false};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
+    else if(activeMode==='malware'){malwareFrom={x,y,moved:false,dir:null,at:0};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     else if(activeMode==='lockscreen'){if(current.phase==='over')current.nextWord();else{const key=lockKeyAt(x,y);if(key>=0)current.guess(LOCK_LETTERS[key]);}}
     // Sugar Snap carves while the needle is down; after a result, a tap brings the next shape.
     else if(activeMode==='sugar'){if(current.phase==='over')current.nextRound();else{current.press(x,y);sugarCarving=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}}
@@ -10713,8 +10732,8 @@ export function setup(ctx) {
     if(activeMode==='malware'){
       if(!malwareFrom||!canvas)return;
       const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
-      const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=malwareDrag(malwareFrom,to);
-      if(dir){classicGames.malware.steer(dir);malwareFrom={...to,moved:true};}
+      const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=malwareStroke(malwareFrom,to,performance.now());
+      if(dir)classicGames.malware.steer(dir);
       return;
     }
     // Bubble Bloom aims on hover and drag; the other games ignore movement.
@@ -10731,7 +10750,7 @@ export function setup(ctx) {
     }
     if(activeMode==='malware'&&malwareFrom){
       const from=malwareFrom,rect=canvas?.getBoundingClientRect();malwareFrom=null;
-      if(e.type!=='pointercancel'&&rect?.width&&rect?.height){const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=from.moved?malwareDrag(from,to):malwareSwipe(classicGames.malware,from,to);if(dir)classicGames.malware.steer(dir);}
+      if(e.type!=='pointercancel'&&rect?.width&&rect?.height){const to={x:(e.clientX-rect.left)*360/rect.width,y:(e.clientY-rect.top)*452/rect.height},dir=from.moved?malwareStroke(from,to,performance.now()):malwareSwipe(classicGames.malware,from,to);if(dir)classicGames.malware.steer(dir);}
       try{if(canvas?.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
       flushClassic();save();refresh();pointerStart=null;return;
     }
