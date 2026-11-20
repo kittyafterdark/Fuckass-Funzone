@@ -1784,6 +1784,12 @@ const SAYINGS=Object.freeze({
    "Down it goes! My hands stay steady and yours stay a crime!",
    "Wrong wafer! Every part of that was the wrong wafer!",
    "Streak over! The tower has chosen its villain, and it's you!"
+  ],
+  stuck:[
+   "That one's STUCK. Put it back. [Concern marker: not for you. For my tower.]",
+   "You feel that resistance? That's the tower begging you to stop.",
+   "Stability warning. That wafer is load-bearing, genius.",
+   "Wow, you picked the one wafer holding everything up. Bold."
   ]
  },
  memory:{
@@ -2020,6 +2026,7 @@ class ReactionDirector {
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
+  else if(game==='wafer'&&event==='stuck'){mood='panic';priority=3;}
   else if(game==='bubble'&&event==='bloom'){mood='shock';priority=3;}
   else if(game==='bubble'&&event==='rainbow'){mood='hype';priority=3;}
   else if(game==='lockscreen'&&event==='wrong'){mood='smug';priority=1;}
@@ -6568,9 +6575,11 @@ function overlay(ctx, message, sub, hint, accent) {
 
 return {boopHoleAt,drawCritter,drawBoopABun};
 })();
-const {WAFER_LEVELS,WAFER_START_LAYERS,WAFER_BASE,WAFER_TABLE,WAFER_W,WAFER_GAP,SAUCER_RX,layerHeight,waferCenterX,supports,pullableLayers,pullRisk,WobblyWafersGame}=(()=>{
-/** Wobbly Wafers: take turns with Gabu pulling wafer cookies from a tower and stacking them on top.
- * A steady-hand meter decides how cleanly each wafer comes out. Whoever topples the tower loses the round.
+const {WAFER_LEVELS,WAFER_START_LAYERS,WAFER_BASE,WAFER_TABLE,WAFER_W,WAFER_GAP,SAUCER_RX,WAFER_PULL,layerHeight,waferCenterX,supports,pullableLayers,weakLayer,waferGrip,safePull,WobblyWafersGame}=(()=>{
+/** Wobbly Wafers: a wafer-cookie Jenga against Gabu. Slide a wafer out of the tower with your finger and it goes on top.
+ * Every wafer has a hidden grip from the weight resting on it and how snugly it sits: loose ones slide out clean, stuck ones
+ * shake the tower however gently you pull, and rushing shakes it more. Nudge one to feel it, push it back, try another.
+ * The tower stands only while the weight above every layer sits over what that layer still has. Whoever topples it loses.
  * Pure rules: no DOM or Spindle APIs. Layers run bottom to top; each holds a left, middle and right wafer.
  */
 const WAFER_LEVELS = Object.freeze(['chill', 'normal', 'hard']);
@@ -6582,13 +6591,16 @@ const WAFER_TABLE = 392;
 const WAFER_W = 52;
 const WAFER_GAP = 3;
 const SAUCER_RX = 100;
+// How far a wafer slides before it is out: its own length. Side wafers slide sideways; a middle one slides out toward you.
+const WAFER_PULL = 52;
 const layerHeight = count => Math.min(22, 290 / count);
 const waferCenterX = slot => 180 + (slot - 1) * (WAFER_W + WAFER_GAP);
-// How steady Gabu's own paws are at each level: the worst pull quality Gabu can roll.
-const GABU_HAND = Object.freeze({ chill: .3, normal: .55, hard: .8 });
 const LEVEL_BONUS = Object.freeze({ chill: 60, normal: 120, hard: 220 });
-// Wobble physics: what a sloppy pull adds, how much each new wafer on top settles it, and how much height alone adds.
-const TOPPLE = 100, SHAKE = 40, SETTLE = 7, HEIGHT = .3;
+// Gabu's pulling hand: how fast he slides (pixels a second), how well he reads grip, and how often Chill picks blindly.
+const GABU = Object.freeze({ chill: { speed: 100, read: 1.4, blind: .12 }, normal: { speed: 72, read: .6, blind: 0 }, hard: { speed: 34, read: .1, blind: 0 } });
+// Shake: per pixel slid, a wafer's grip adds GRIP, and every pixel a second over SAFE adds RUSH more. The tower settles at
+// SETTLE a second, but never below a floor that rises with every hole, so a holey tower stays nervy.
+const TOPPLE = 100, GRIP = .65, RUSH = .0057, SAFE = 60, SETTLE = 5, HOLE = 2, SMOOTH = .2, KEY_STEP = 2, MARGIN = 3, GRAVITY = 650;
 const level = value => WAFER_LEVELS.includes(value) ? value : 'normal';
 const unit = random => Math.max(0, Math.min(.999999999, Number(random()) || 0));
 const whole = (value, max) => Number.isSafeInteger(value) && value >= 0 && value <= max;
@@ -6601,13 +6613,36 @@ function pullableLayers(layers) {
   const blocked = full(layers[layers.length - 1]) ? 1 : 2;
   return Math.max(0, layers.length - blocked);
 }
-/** Wobble one pull adds before hand steadiness, or Infinity when the layer could no longer hold the tower. */
-function pullRisk(layers, row, slot) {
-  if (!Number.isInteger(row) || row < 0 || row >= pullableLayers(layers) || !layers[row]?.[slot]) return Infinity;
-  const after = [...layers[row]]; after[slot] = false;
-  if (!after.some(Boolean) || !supports(after)) return Infinity;
-  const base = slot === 1 ? 5 : full(layers[row]) ? 6 : 4;
-  return base + layers.length * HEIGHT + (row < 3 ? 2 : 0);
+/** The lowest layer that cannot hold what rests on it, and which way the weight hangs off it, or null while the tower stands.
+ * Above every layer, the middle of all the weight must sit over the span of wafers that layer still has. */
+function weakLayer(layers) {
+  let mass = 0, moment = 0, weak = null;
+  for (let row = layers.length - 1; row >= 0; row--) {
+    const present = [0, 1, 2].filter(s => layers[row][s]);
+    if (mass > 0) {
+      const middle = moment / mass;
+      if (!present.length) weak = { row, side: 0 };
+      else {
+        const lo = waferCenterX(present[0]) - WAFER_W / 2 + MARGIN, hi = waferCenterX(present[present.length - 1]) + WAFER_W / 2 - MARGIN;
+        if (middle < lo || middle > hi) weak = { row, side: middle < lo ? -1 : 1 };
+      }
+    }
+    for (const s of present) { mass++; moment += waferCenterX(s); }
+  }
+  return weak;
+}
+/** How hard a wafer is held: the weight above it, shared by what is left in its layer, times how snugly it sits (0 to 1). */
+function waferGrip(layers, snug, row, slot) {
+  if (!layers[row]?.[slot]) return 0;
+  let above = 0; for (let r = row + 1; r < layers.length; r++) above += layers[r].filter(Boolean).length;
+  const load = Math.max(.12, Math.min(1.6, above / layers[row].filter(Boolean).length / 12));
+  return load * (.25 + .75 * (snug[row]?.[slot] ?? .5));
+}
+/** Whether pulling this wafer out would leave a tower that stands. */
+function safePull(layers, row, slot) {
+  if (!Number.isInteger(row) || row < 0 || row >= pullableLayers(layers) || !layers[row]?.[slot]) return false;
+  const after = layers.map(l => [...l]); after[row][slot] = false;
+  return after[row].some(Boolean) && !weakLayer(after);
 }
 class WobblyWafersGame {
   constructor({ random = Math.random, onEvent = () => {}, saved, level: chosen = 'normal' } = {}) {
@@ -6619,9 +6654,10 @@ class WobblyWafersGame {
   }
   newTower(starter) {
     this.layers = Array.from({ length: WAFER_START_LAYERS }, () => [true, true, true]);
-    this.wobble = 0; this.starter = starter; this.turn = starter; this.phase = 'turn'; this.result = null;
-    this.selected = null; this.meter = 0; this.meterClock = 0; this.cursor = { row: 4, slot: 1 }; this.crumbs = []; this.tip = null; this.sway = 0; this.lastPull = null;
-    this.breakRow = -1; this.pulledOut = null;
+    this.snug = this.layers.map(() => [0, 1, 2].map(() => unit(this.random)));
+    this.wobble = 0; this.starter = starter; this.turn = starter; this.phase = 'turn'; this.result = null; this.holes = 0;
+    this.selected = null; this.speed = 0; this.motion = 0; this.jiggle = 0; this.cursor = { row: 4, slot: 1 }; this.crumbs = []; this.tip = null; this.sway = 0;
+    this.lastPull = null; this.breakRow = -1; this.pulledOut = null; this.gabuPull = null;
     this.thinking = starter === 2 ? .8 : 0;
   }
   start() {
@@ -6635,74 +6671,107 @@ class WobblyWafersGame {
     if (this.status !== 'playing' || this.phase !== 'over') return false;
     this.round++; this.newTower(this.round % 2 ? 1 : 2); this.onEvent('round', { round: this.round, starter: this.starter }); return true;
   }
-  /** How far the top of the tower leans right now, in pixels. Shared by the drawing and the tap test so they always agree. */
-  lean(reduced = false) { return reduced ? 0 : Math.sin(this.sway * 3) * Math.min(100, this.wobble) / 100 * 9; }
-  /** The meter sweeps faster as the tower grows. Quality is 1 at the center and 0 at either end. */
-  meterSpeed() { return 1 + this.layers.length * .035; }
-  quality() { return 1 - Math.abs(this.meter - .5) * 2; }
+  /** How far the top of the tower leans right now, in pixels: a slow sway that grows with the wobble, plus a quick shiver
+   * while a wafer is being pulled. Shared by the drawing and the tap test so they always agree. */
+  lean(reduced = false) {
+    if (reduced) return 0;
+    return Math.sin(this.sway * 2.4) * Math.min(100, this.wobble) / 100 * 8 + Math.sin(this.sway * 31) * this.jiggle * 2.5;
+  }
+  grip(row, slot) { return waferGrip(this.layers, this.snug, row, slot); }
+  /** How a held wafer feels, for the readout: loose, snug or stuck. */
+  feel(row, slot) { const g = this.grip(row, slot); return g < .22 ? 'loose' : g < .55 ? 'snug' : 'stuck'; }
   moveCursor(dx, dy) {
     const top = Math.max(0, pullableLayers(this.layers) - 1);
     this.cursor = { row: Math.max(0, Math.min(top, this.cursor.row + dy)), slot: Math.max(0, Math.min(2, this.cursor.slot + dx)) };
   }
-  /** First tap picks a wafer and starts the meter. Another pullable wafer switches; any other tap pulls. */
-  choose(row = this.cursor.row, slot = this.cursor.slot) {
+  canPull(row, slot) { return Number.isInteger(row) && row >= 0 && row < pullableLayers(this.layers) && !!this.layers[row]?.[slot]; }
+  /** Takes hold of a wafer. A different wafer you had partly out slides back in first, with a little shake. */
+  grab(row = this.cursor.row, slot = this.cursor.slot) {
     if (this.status !== 'playing') return false;
     if (this.phase === 'over') return this.nextRound();
-    if (this.turn !== 1) return false;
-    const valid = Number.isInteger(row) && row >= 0 && row < pullableLayers(this.layers) && !!this.layers[row]?.[slot];
-    if (this.selected && !(valid && (this.selected.row !== row || this.selected.slot !== slot))) return this.pull();
-    if (!valid) return false;
-    this.selected = { row, slot }; this.cursor = { row, slot }; this.meterClock = unit(this.random) * 2; this.onEvent('select', { row, slot }); return true;
+    if (this.turn !== 1 || !this.canPull(row, slot)) return false;
+    const held = this.selected;
+    if (held && held.row === row && held.slot === slot) return true;
+    if (held) this.pushBack();
+    this.selected = { row, slot, progress: 0, peak: 0 }; this.cursor = { row, slot }; this.onEvent('select', { row, slot, feel: this.feel(row, slot) }); return true;
   }
-  cancel() { this.selected = null; }
-  pull() {
-    if (!this.selected || this.turn !== 1 || this.phase !== 'turn' || this.status !== 'playing') return false;
-    const { row, slot } = this.selected; this.selected = null;
-    this.take(1, row, slot, this.quality()); return true;
+  /** Keeps the old tap-to-pick name for the keyboard and taps: a tap picks a wafer; on the held one it slides it a step. */
+  choose(row = this.cursor.row, slot = this.cursor.slot) {
+    if (this.phase === 'over') return this.nextRound();
+    const held = this.selected;
+    if (held && held.row === row && held.slot === slot) return this.slide(KEY_STEP);
+    return this.grab(row, slot);
   }
-  take(who, row, slot, quality) {
-    const risk = pullRisk(this.layers, row, slot), mine = who === 1;
-    this.lastPull = { who, row, slot, age: 0 };
-    // The tower is left as it stood when it fell, so a finished game still saves a valid tower.
-    if (risk === Infinity) { this.topple(who, 'support', row, slot); return; }
-    this.layers[row][slot] = false;
-    this.wobble += risk + (1 - quality) * SHAKE;
-    const perfect = quality >= .92;
-    this.onEvent(mine ? 'pull' : 'gabu_pull', { row, slot, quality, wobble: this.wobble });
+  /** Slides the held wafer out by `amount` pixels (negative pushes it back in). Its grip shakes the tower as it moves,
+   * more when you rush. At its full length it comes out and goes on top. */
+  slide(amount) {
+    const held = this.selected;
+    if (!held || this.status !== 'playing' || this.phase !== 'turn' || this.turn !== 1 || !Number.isFinite(amount) || !amount) return false;
+    this.move(1, held, amount); return true;
+  }
+  move(who, held, amount) {
+    const step = Math.max(-held.progress * WAFER_PULL, Math.min((1 - held.progress) * WAFER_PULL, amount)), d = Math.abs(step);
+    if (!d) return;
+    held.progress += step / WAFER_PULL; this.motion += d;
+    const grip = this.grip(held.row, held.slot), rush = Math.max(0, this.speed - SAFE);
+    const shake = d * (grip * GRIP + rush * RUSH * (.3 + grip)) * (step < 0 ? .5 : 1);
+    this.wobble += shake; held.peak += shake; this.jiggle = Math.min(1, this.jiggle + shake * .08);
     if (this.wobble >= TOPPLE) { this.topple(who, 'wobble'); return; }
+    // A quarter of the way out on a stuck wafer, Gabu notices.
+    if (who === 1 && !held.warned && held.progress >= .25 && this.feel(held.row, held.slot) === 'stuck') { held.warned = true; this.onEvent('stuck', { row: held.row, slot: held.slot }); }
+    if (held.progress >= 1 - 1e-9) this.take(who, held);
+  }
+  /** Lets go. A wafer left part-way out stays there, still yours to finish or push back. */
+  release() { if (this.selected && this.selected.progress <= 0) this.selected = null; }
+  /** Pushes a part-pulled wafer back in, with a little shake, and lets go of it. */
+  pushBack() {
+    const held = this.selected; if (!held) return;
+    this.speed = 0; if (held.progress > 0) this.move(1, held, -held.progress * WAFER_PULL);
+    if (this.phase === 'turn') this.selected = null;
+  }
+  cancel() { this.pushBack(); }
+  /** The wafer is out: it goes on top, and the tower has to hold without it. */
+  take(who, held) {
+    const { row, slot } = held, mine = who === 1;
+    this.selected = null; this.gabuPull = null; this.lastPull = { who, row, slot, age: 0 };
+    this.layers[row][slot] = false;
+    const weak = weakLayer(this.layers);
+    // The tower is left as it stood when it fell, pulled wafer included and marked, so a finished game still saves a valid tower.
+    if (weak) { this.layers[row][slot] = true; this.topple(who, 'support', row, slot, weak); return; }
+    this.holes++;
     const top = this.layers[this.layers.length - 1];
-    if (full(top)) this.layers.push([true, false, false]); else top[top.indexOf(false)] = true;
-    // A fresh wafer on top lets the tower settle. Tuned so towers fall to shaky hands long before anyone runs out of safe pulls.
-    this.wobble = Math.max(0, this.wobble - SETTLE);
+    if (full(top)) { this.layers.push([true, false, false]); this.snug.push([unit(this.random), unit(this.random), unit(this.random)]); }
+    else { const i = top.indexOf(false); top[i] = true; this.snug[this.layers.length - 1][i] = unit(this.random); }
+    const clean = held.peak < 3;
+    this.onEvent(mine ? 'pull' : 'gabu_pull', { row, slot, wobble: this.wobble, clean });
     if (mine) {
-      const earned = 10 + (perfect ? 10 : 0);
+      const earned = 10 + (clean ? 10 : 0);
       this.score = Math.min(999999999, this.score + earned); this.onEvent('score', { score: this.score, earned });
-      if (perfect) this.onEvent('perfect', { quality });
+      if (clean) this.onEvent('perfect', { peak: held.peak });
       if (this.wobble >= 70) this.onEvent('risky', { wobble: this.wobble });
     } else if (this.wobble >= 70) this.onEvent('gabu_risky', { wobble: this.wobble });
-    this.turn = 3 - who;
-    if (this.turn === 2) this.thinking = .7 + unit(this.random) * .5;
+    this.turn = 3 - who; this.speed = 0;
+    if (this.turn === 2) this.thinking = .8 + unit(this.random) * .6;
   }
-  /** The tower breaks at its real weak point: the layer that lost its support, or for a wobble, its lowest gappy layer.
-   * Everything above the break falls toward the unsupported side; the rest keeps standing. */
-  topple(who, reason, row = -1, slot = -1) {
-    this.phase = 'over'; this.selected = null;
+  /** The tower breaks at its real weak point: the layer that can no longer hold what is on it, or for a wobble, its lowest
+   * gappy layer. Everything above the break falls toward the side its weight hangs over; the rest keeps standing. */
+  topple(who, reason, row = -1, slot = -1, weak = null) {
+    this.phase = 'over'; this.selected = null; this.gabuPull = null;
     const n = this.layers.length, gappy = this.layers.findIndex((layer, i) => i < n - 1 && !full(layer));
-    this.breakRow = reason === 'support' ? row : gappy >= 0 ? gappy : Math.floor(n / 2);
+    this.breakRow = weak ? weak.row : gappy >= 0 ? gappy : Math.floor(n / 2);
     this.pulledOut = reason === 'support' ? { row, slot } : null;
-    let side = Math.sign(this.lean()) || (unit(this.random) < .5 ? -1 : 1);
-    // The top tips toward the side that lost its wafer: its weight is centered over the gap, not over the edge that is left.
-    if (reason === 'support') { const remaining = this.layers[row].map((on, i) => on && i !== slot); side = remaining[0] ? 1 : remaining[2] ? -1 : side; }
+    const side = weak?.side || Math.sign(this.lean()) || (unit(this.random) < .5 ? -1 : 1);
     const lh = layerHeight(n), lean = this.lean();
     // Everything above the break tips over as one piece, hinged on the outer edge of what still stands in the break layer
     // on the falling side, and speeds up like a falling stick. A wobble topple starts with a shove.
-    const standing = [0, 1, 2].filter(s => this.layers[this.breakRow][s] && !(this.pulledOut?.row === this.breakRow && this.pulledOut?.slot === s));
+    const gone = (r, s) => this.pulledOut?.row === r && this.pulledOut?.slot === s;
+    const standing = [0, 1, 2].filter(s => this.layers[this.breakRow][s] && !gone(this.breakRow, s));
     const edges = (standing.length ? standing : [0, 1, 2]).map(s => waferCenterX(s) + side * WAFER_W / 2);
     const height = Math.max(40, (n - this.breakRow - 1) * lh);
     this.tip = { x: (side > 0 ? Math.max(...edges) : Math.min(...edges)) + lean * this.breakRow / n, y: WAFER_BASE - (this.breakRow + 1) * lh,
-      side, angle: .03, omega: reason === 'wobble' ? .9 : .4, k: 3 * 900 / (2 * height) };
+      side, angle: .03, omega: reason === 'wobble' ? .6 : .25, k: 3 * GRAVITY / (2 * height) };
     for (let r = this.breakRow + 1; r < n; r++) this.layers[r].forEach((on, s) => {
-      if (!on) return;
+      if (!on || gone(r, s)) return;
       const x = waferCenterX(s) + lean * r / n, y = WAFER_BASE - (r + .5) * lh;
       this.crumbs.push({ x, y, rx: x - this.tip.x, ry: y - this.tip.y, attached: true, h: lh - 2, vx: 0, vy: 0, side, spin: 0, spinRate: 0, flavor: r + s, crossed: r % 2 === 1, rest: false });
     });
@@ -6712,16 +6781,17 @@ class WobblyWafersGame {
       this.onEvent('score', { score: this.score, earned }); this.onEvent('win', { score: this.score, wins: this.wins, reason });
     } else { this.result = 'loss'; this.status = 'dead'; this.onEvent('death', { score: this.score, wins: this.wins, reason }); }
   }
-  /** Gabu takes the safest wafer in sight. Lower levels sometimes misjudge which one that is, and pull with shakier paws. */
+  /** Gabu picks the wafer that feels loosest to him and never one that would drop the tower, unless Chill picks blindly.
+   * How well he reads grip depends on his level. */
   gabuChoice() {
-    const options = [];
+    const options = [], g = GABU[this.level];
     for (let row = 0; row < pullableLayers(this.layers); row++) for (let slot = 0; slot < 3; slot++) {
-      const risk = pullRisk(this.layers, row, slot); if (this.layers[row][slot]) options.push({ row, slot, risk });
+      if (this.layers[row][slot]) options.push({ row, slot, safe: safePull(this.layers, row, slot), grip: this.grip(row, slot) });
     }
-    const safe = options.filter(o => o.risk !== Infinity), pool = safe.length ? safe : options;
-    if (this.level === 'chill' && unit(this.random) < .12) return options[Math.floor(unit(this.random) * options.length)];
-    const noise = this.level === 'hard' ? 1 : this.level === 'normal' ? 4 : 8;
-    return pool.map(o => ({ ...o, score: o.risk + unit(this.random) * noise })).sort((a, b) => a.score - b.score)[0];
+    if (!options.length) return null;
+    if (unit(this.random) < g.blind) return options[Math.floor(unit(this.random) * options.length)];
+    const safe = options.filter(o => o.safe), pool = safe.length ? safe : options;
+    return pool.map(o => ({ ...o, feel: o.grip * (1 + (unit(this.random) - .5) * g.read) })).sort((a, b) => a.feel - b.feel)[0];
   }
   /** Advances the topple in small steps, so a fast fall never skips past the ground between two frames. */
   settleCrumbs(dt) {
@@ -6744,14 +6814,15 @@ class WobblyWafersGame {
         if (c.y + this.reach(c) >= this.floorAt(c.x)) release = true;
       }
       if (!release) return;
-      // Pulling apart costs the wafers some of their speed and spin, so they tumble less than a quarter turn before landing.
-      for (const c of this.crumbs) if (c.attached) { c.attached = false; c.vx = c.vx * .6 + (unit(this.random) - .5) * 24; c.vy *= .6; c.spinRate = Math.max(-1.6, Math.min(1.6, w * .6)); }
+      // Pulling apart costs the wafers a little speed and spin, so they tumble less than a quarter turn before landing,
+      // without a visible jolt where the section breaks up.
+      for (const c of this.crumbs) if (c.attached) { c.attached = false; c.vx = c.vx * .85 + (unit(this.random) - .5) * 8; c.vy *= .85; c.spinRate = Math.max(-1.6, Math.min(1.6, w * .8)); }
       this.tip = null;
     }
     for (const c of this.crumbs) {
       if (c.rest || c.attached) continue;
       if (c.grounded) { this.tipOnGround(c, dt); continue; }
-      c.vy += 900 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.spin += c.spinRate * dt;
+      c.vy += GRAVITY * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.spin += c.spinRate * dt;
       // The edges of the screen are the walls of the room: a wafer bumps off them instead of leaving.
       if (c.x < WAFER_W / 2 || c.x > 360 - WAFER_W / 2) { c.x = Math.max(WAFER_W / 2, Math.min(360 - WAFER_W / 2, c.x)); c.vx = -c.vx * .3; }
       const floor = this.floorAt(c.x), reach = this.reach(c);
@@ -6779,8 +6850,8 @@ class WobblyWafersGame {
     const partner = this.cornerOffset(c, [3, 2, 1, 0][g.k]), onEnd = pivot.y - partner.y < c.h * .4;
     if (onEnd) {
       g.roll ||= Math.sign(c.spinRate) || c.side || 1;
-      c.spinRate += g.roll * (900 * Math.abs(pivot.x) / inertia + 4) * dt;
-    } else { g.roll = 0; c.spinRate += 900 * -pivot.x / inertia * dt; }
+      c.spinRate += g.roll * (GRAVITY * Math.abs(pivot.x) / inertia + 4) * dt;
+    } else { g.roll = 0; c.spinRate += GRAVITY * -pivot.x / inertia * dt; }
     const flat = Math.round(c.spin / Math.PI) * Math.PI, next = c.spin + c.spinRate * dt;
     if ((c.spin - flat) * (next - flat) <= 0 && Math.abs(c.spin - flat) < .6) {
       // A long side is down: it comes to rest flat, where its corner touched.
@@ -6804,49 +6875,63 @@ class WobblyWafersGame {
     const dt = Math.min(delta, .12);
     this.settleCrumbs(dt);
     if (this.lastPull) this.lastPull.age += dt;
+    this.jiggle = Math.max(0, this.jiggle - dt * 2.5);
     if (this.status !== 'playing') return;
     this.sway += dt;
     if (this.phase !== 'turn') return;
-    if (this.turn === 1 && this.selected) {
-      this.meterClock += dt * this.meterSpeed(); this.meter = (1 - Math.cos(this.meterClock * Math.PI)) / 2; return;
-    }
+    // How fast the held wafer is moving, smoothed over a moment, since pointer events arrive in bursts.
+    this.speed += (this.motion / dt - this.speed) * (1 - Math.exp(-dt / SMOOTH)); this.motion = 0;
+    // The tower settles while nothing is pulling at it, down to a floor set by how many holes it has.
+    const pulling = this.turn === 1 ? !!this.selected : !!this.gabuPull;
+    this.wobble = Math.max(Math.min(this.wobble, this.holes * HOLE), this.wobble - (pulling ? SETTLE * .4 : SETTLE) * dt);
     if (this.turn !== 2) return;
-    this.thinking -= dt; if (this.thinking > 0) return;
-    const pick = this.gabuChoice(); if (!pick) return;
-    const hand = GABU_HAND[this.level]; this.take(2, pick.row, pick.slot, hand + unit(this.random) * (1 - hand));
+    if (!this.gabuPull) {
+      this.thinking -= dt; if (this.thinking > 0) return;
+      const pick = this.gabuChoice(); if (!pick) return;
+      this.gabuPull = { row: pick.row, slot: pick.slot, progress: 0, peak: 0 }; this.onEvent('gabu_select', { row: pick.row, slot: pick.slot });
+    }
+    const speed = GABU[this.level].speed * (.85 + unit(this.random) * .3);
+    this.move(2, this.gabuPull, speed * dt);
   }
   snapshot() {
-    return { version: 1, layers: this.layers.map(l => [...l]), wobble: Math.round(this.wobble * 100) / 100, turn: this.turn, starter: this.starter, round: this.round,
+    return { version: 2, layers: this.layers.map(l => [...l]), snug: this.snug.map(l => l.map(v => Math.round(v * 100) / 100)), holes: this.holes,
+      wobble: Math.round(this.wobble * 100) / 100, turn: this.turn, starter: this.starter, round: this.round,
       score: this.score, wins: this.wins, level: this.level, phase: this.phase, result: this.result, cursor: { ...this.cursor },
       breakRow: this.breakRow, pulledOut: this.pulledOut ? { ...this.pulledOut } : null,
       status: this.status === 'playing' ? 'paused' : this.status };
   }
   restore(data) {
-    if (!data || data.version !== 1 || !Array.isArray(data.layers) || data.layers.length < 2 || data.layers.length > 80 ||
+    if (!data || ![1, 2].includes(data.version) || !Array.isArray(data.layers) || data.layers.length < 2 || data.layers.length > 80 ||
       data.layers.some(l => !Array.isArray(l) || l.length !== 3 || l.some(v => typeof v !== 'boolean') || !l.some(Boolean)) ||
       !Number.isFinite(data.wobble) || data.wobble < 0 || data.wobble > TOPPLE * 2 || ![1, 2].includes(data.turn) || ![1, 2].includes(data.starter) ||
       !whole(data.round, 100000) || data.round < 1 || !whole(data.score, 999999999) || !whole(data.wins, 100000) || !WAFER_LEVELS.includes(data.level) ||
       !['turn', 'over'].includes(data.phase) || !['idle', 'paused', 'playing', 'dead'].includes(data.status) ||
       !data.cursor || !whole(data.cursor.row, 79) || !whole(data.cursor.slot, 2)) return false;
+    // Version 2 adds how snugly each wafer sits; older saves get fresh, random snugness.
+    if (data.version === 2 && (!Array.isArray(data.snug) || data.snug.length !== data.layers.length ||
+      data.snug.some(l => !Array.isArray(l) || l.length !== 3 || l.some(v => typeof v !== 'number' || !(v >= 0 && v <= 1))) || !whole(data.holes, 10000))) return false;
     const over = data.phase === 'over';
-    if (!over && (data.wobble >= TOPPLE || data.layers.slice(0, -1).some(l => !supports(l)))) return false;
+    if (!over && (data.wobble >= TOPPLE || weakLayer(data.layers))) return false;
     if ((data.status === 'dead') !== (over && data.result === 'loss') || over && !['win', 'loss'].includes(data.result)) return false;
     this.layers = data.layers.map(l => [...l]); this.wobble = data.wobble; this.turn = data.turn; this.starter = data.starter; this.round = data.round;
+    this.snug = data.version === 2 ? data.snug.map(l => [...l]) : this.layers.map(() => [0, 1, 2].map(() => unit(this.random)));
+    this.holes = data.version === 2 ? data.holes : this.layers.slice(0, -1).flat().filter(v => !v).length;
     this.score = data.score; this.wins = data.wins; this.level = data.level; this.phase = data.phase; this.result = over ? data.result : null;
     this.cursor = { row: Math.min(data.cursor.row, Math.max(0, pullableLayers(this.layers) - 1)), slot: data.cursor.slot };
     // A finished tower keeps its break; the fallen wafers themselves are not saved.
     this.breakRow = over && Number.isInteger(data.breakRow) && data.breakRow >= 0 && data.breakRow < this.layers.length ? data.breakRow : over ? Math.floor(this.layers.length / 2) : -1;
     const pulled = data.pulledOut;
     this.pulledOut = over && pulled && whole(pulled.row, this.layers.length - 1) && whole(pulled.slot, 2) ? { row: pulled.row, slot: pulled.slot } : null;
-    this.selected = null; this.meter = 0; this.meterClock = 0; this.crumbs = []; this.tip = null; this.sway = 0; this.lastPull = null; this.thinking = this.turn === 2 ? .7 : 0;
+    this.selected = null; this.speed = 0; this.motion = 0; this.jiggle = 0; this.crumbs = []; this.tip = null; this.sway = 0; this.lastPull = null; this.gabuPull = null;
+    this.thinking = this.turn === 2 ? .7 : 0;
     this.status = data.status === 'playing' ? 'paused' : data.status; return true;
   }
 }
 
-return {WAFER_LEVELS,WAFER_START_LAYERS,WAFER_BASE,WAFER_TABLE,WAFER_W,WAFER_GAP,SAUCER_RX,layerHeight,waferCenterX,supports,pullableLayers,pullRisk,WobblyWafersGame};
+return {WAFER_LEVELS,WAFER_START_LAYERS,WAFER_BASE,WAFER_TABLE,WAFER_W,WAFER_GAP,SAUCER_RX,WAFER_PULL,layerHeight,waferCenterX,supports,pullableLayers,weakLayer,waferGrip,safePull,WobblyWafersGame};
 })();
-const {waferLayout,waferAt,drawWafer,drawWobblyWafers}=(()=>{
-/** Wobbly Wafers canvas: a tea-party table, a swaying tower of pastel wafer cookies, and a steady-hand meter. */
+const {waferLayout,heldOffset,waferAt,drawWafer,drawWobblyWafers}=(()=>{
+/** Wobbly Wafers canvas: a tea-party table and a swaying tower of pastel wafer cookies you slide out by hand. */
 
 const W = 360, H = 452, BASE = WAFER_BASE;
 const FLAVORS = [['#ffb7c9', '#fff4f7', '#e8869f'], ['#f6d79a', '#fffaf0', '#cfa65c'], ['#a9765f', '#ffe9f1', '#7a4f3d'], ['#bfe3a4', '#f6fff0', '#86b86a']];
@@ -6857,10 +6942,28 @@ const drawTxt = (ctx, t, x, y, size, color = '#fbf3ef', align = 'left') => {
 const drawSprite = (ctx, img, x, y, w, h) => { if (!img?.complete || !img.naturalWidth) return false; ctx.drawImage(img, x, y, w, h); return true; };
 const waferLayout = count => ({ layerH: layerHeight(count) });
 const slotX = slot => waferCenterX(slot) - WAFER_W / 2;
-function waferAt(x, y, count, lean = 0) {
+/** Where a held wafer is drawn as it slides: side wafers move sideways, a middle wafer comes out toward you (it grows a little). */
+function heldOffset(held) {
+  const p = held?.progress || 0;
+  return held?.slot === 0 ? { dx: -p * WAFER_PULL, grow: 1 } : held?.slot === 2 ? { dx: p * WAFER_PULL, grow: 1 } : { dx: 0, grow: 1 + p * .3 };
+}
+/** Which wafer is under a point. The wafer you are holding is found where it is drawn, even part-way out. */
+function waferAt(x, y, count, lean = 0, held = null) {
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  const { layerH } = waferLayout(count), row = Math.floor((BASE - y) / layerH), dx = lean * row / count, slot = [0, 1, 2].find(s => x - dx >= slotX(s) && x - dx < slotX(s) + WAFER_W);
+  const { layerH } = waferLayout(count), row = Math.floor((BASE - y) / layerH), dx = lean * row / count;
+  if (held) {
+    const { dx: out, grow } = heldOffset(held), cx = waferCenterX(held.slot) + lean * held.row / count + out, cy = BASE - (held.row + .5) * layerH;
+    if (Math.abs(x - cx) <= WAFER_W * grow / 2 + 4 && Math.abs(y - cy) <= layerH * grow / 2 + 4) return { row: held.row, slot: held.slot };
+  }
+  const slot = [0, 1, 2].find(s => x - dx >= slotX(s) && x - dx < slotX(s) + WAFER_W);
   return row >= 0 && row < count && slot !== undefined ? { row, slot } : null;
+}
+const FEEL_COLORS = Object.freeze({ loose: '#7fcf8a', snug: '#ffcf5a', stuck: '#ff6f9f' });
+// The wobble bar warms smoothly from mint through gold to pink as the tower gets shakier.
+const wobbleColor = w => w < 50 ? mix('#7fcf8a', '#ffcf5a', w / 50) : mix('#ffcf5a', '#ff6f9f', (w - 50) / 50);
+function mix(a, b, t) {
+  const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16)), pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16)), k = Math.max(0, Math.min(1, t));
+  return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * k).toString(16).padStart(2, '0')).join('');
 }
 /** One wafer: alternate layers show the striped side or the waffle top, so the tower reads as crossed layers. */
 function drawWafer(ctx, x, y, w, h, flavor, crossed) {
@@ -6890,7 +6993,10 @@ function drawWobblyWafers(canvas, game, { best = 0, images = {}, reduced = false
   drawTxt(ctx, LEVEL_NAMES[game.level] || 'GABU', 340, 66, 10, '#e2d4ef', 'right');
   const wobble = Math.min(100, game.wobble);
   drawTxt(ctx, 'WOBBLE', 20, 84, 9, '#cdbbe0'); rounded(ctx, 66, 76, 120, 9, 4.5, '#ffffff22');
-  rounded(ctx, 66, 76, 120 * wobble / 100, 9, 4.5, wobble >= 70 ? '#ff6f9f' : wobble >= 40 ? '#ffcf5a' : '#7fcf8a');
+  if (wobble > 0) rounded(ctx, 66, 76, Math.max(9, 120 * wobble / 100), 9, 4.5, wobbleColor(wobble));
+  // While a wafer is held, how it feels in your fingers: loose, snug or stuck.
+  const held = game.selected || game.gabuPull, feel = held ? game.feel(held.row, held.slot) : null;
+  if (feel) drawTxt(ctx, `${game.selected ? 'FEELS' : 'GABU’S FEELS'} ${feel.toUpperCase()}`, 340, 84, 9, FEEL_COLORS[feel], 'right');
   const n = game.layers.length, { layerH } = waferLayout(n), lean = game.lean(reduced);
   const fallen = game.phase === 'over';
   for (let row = 0; row < n; row++) {
@@ -6898,16 +7004,22 @@ function drawWobblyWafers(canvas, game, { best = 0, images = {}, reduced = false
     for (let slot = 0; slot < 3; slot++) {
       // After a topple only the stump below the break stands; the wafer pulled out to cause it is gone.
       if (!game.layers[row][slot] || fallen && (row > game.breakRow || game.pulledOut?.row === row && game.pulledOut?.slot === slot)) continue;
-      const x = slotX(slot) + dx, chosen = game.selected?.row === row && game.selected?.slot === slot;
-      drawWafer(ctx, x + (chosen ? (slot === 0 ? -6 : slot === 2 ? 6 : 0) * game.meter : 0), y + 1, WAFER_W, layerH - 2, row + slot, row % 2 === 1);
-      if (chosen) {
-        const risk = pullRisk(game.layers, row, slot);
-        ctx.strokeStyle = risk === Infinity ? '#ff5d8f' : risk >= 16 ? '#ffcf5a' : '#5fd8d2'; ctx.lineWidth = 2.6;
-        ctx.beginPath(); ctx.roundRect(x - 2, y - 1, WAFER_W + 4, layerH + 2, 6); ctx.stroke();
-      } else if (cursor && game.status === 'playing' && game.turn === 1 && game.phase === 'turn' && !game.selected && game.cursor.row === row && game.cursor.slot === slot) {
+      const x = slotX(slot) + dx, moving = held?.row === row && held?.slot === slot;
+      // The held wafer is drawn after the tower, on top of its neighbours.
+      if (moving) continue;
+      drawWafer(ctx, x, y + 1, WAFER_W, layerH - 2, row + slot, row % 2 === 1);
+      if (cursor && game.status === 'playing' && game.turn === 1 && game.phase === 'turn' && !game.selected && game.cursor.row === row && game.cursor.slot === slot) {
         ctx.strokeStyle = '#ffffffaa'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.roundRect(x - 2, y - 1, WAFER_W + 4, layerH + 2, 6); ctx.stroke(); ctx.setLineDash([]);
       }
     }
+  }
+  if (held && game.layers[held.row]?.[held.slot]) {
+    const { dx: out, grow } = heldOffset(held), w = WAFER_W * grow, h = (layerH - 2) * grow;
+    const cx = slotX(held.slot) + WAFER_W / 2 + lean * held.row / n + out, cy = BASE - (held.row + .5) * layerH + (grow - 1) * 14;
+    // A middle wafer coming toward you casts a soft shadow on the layer under it.
+    if (grow > 1) { ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(cx, cy + h / 2 + 2, w / 2, 3, 0, 0, Math.PI * 2); ctx.fill(); }
+    drawWafer(ctx, cx - w / 2, cy - h / 2, w, h, held.row + held.slot, held.row % 2 === 1);
+    ctx.strokeStyle = FEEL_COLORS[feel] || '#5fd8d2'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.roundRect(cx - w / 2 - 2, cy - h / 2 - 2, w + 4, h + 4, 6); ctx.stroke();
   }
   // Pullable layers end at a faint line, so the off-limits top is obvious.
   if (game.phase === 'turn') { const limit = BASE - pullableLayers(game.layers) * layerH; ctx.strokeStyle = '#ffffff30'; ctx.setLineDash([3, 4]); ctx.beginPath(); ctx.moveTo(78, limit); ctx.lineTo(282, limit); ctx.stroke(); ctx.setLineDash([]); }
@@ -6916,26 +7028,27 @@ function drawWobblyWafers(canvas, game, { best = 0, images = {}, reduced = false
     drawWafer(ctx, -WAFER_W / 2, -c.h / 2, WAFER_W, c.h, c.flavor, c.crossed); ctx.restore();
   }
   if (game.lastPull && game.lastPull.age < .4) {
-    const p = game.lastPull, t = p.age / .4, dir = p.slot === 0 ? -1 : p.slot === 2 ? 1 : (p.row % 2 ? 1 : -1);
-    ctx.globalAlpha = 1 - t; drawWafer(ctx, slotX(p.slot) + dir * t * 90, BASE - (p.row + 1) * layerH + 1, WAFER_W, layerH - 2, p.row + p.slot, p.row % 2 === 1); ctx.globalAlpha = 1;
+    // The wafer that just came out carries on from where it was let go and fades as it heads for the top.
+    const p = game.lastPull, t = p.age / .4, { dx: out, grow } = heldOffset({ ...p, progress: 1 }), dir = Math.sign(out);
+    const w = WAFER_W * (grow + (dir ? 0 : t * .2)), h = (layerH - 2) * (grow + (dir ? 0 : t * .2)), cx = slotX(p.slot) + WAFER_W / 2 + out + dir * t * 50, cy = BASE - (p.row + .5) * layerH - t * 30;
+    ctx.globalAlpha = 1 - t; drawWafer(ctx, cx - w / 2, cy - h / 2, w, h, p.row + p.slot, p.row % 2 === 1); ctx.globalAlpha = 1;
   }
   rounded(ctx, 0, 412, W, 40, 0, '#2c1a33');
   const yourTurn = game.status === 'playing' && game.phase === 'turn' && game.turn === 1;
   if (yourTurn && game.selected) {
-    const mx = 70, mw = 220, bar = ctx.createLinearGradient(mx, 0, mx + mw, 0);
-    bar.addColorStop(0, '#ff6f9f'); bar.addColorStop(.3, '#ffcf5a'); bar.addColorStop(.5, '#7fcf8a'); bar.addColorStop(.7, '#ffcf5a'); bar.addColorStop(1, '#ff6f9f');
-    rounded(ctx, mx, 418, mw, 10, 5, bar); rounded(ctx, mx + game.meter * mw - 2.5, 414, 5, 18, 2.5, '#ffffff');
-    drawTxt(ctx, 'TAP AGAIN WHILE IT’S GREEN TO PULL', 180, 445, 9, '#fdf2f7', 'center');
+    const p = game.selected.progress;
+    rounded(ctx, 90, 419, 180, 7, 3.5, '#ffffff22'); if (p > 0) rounded(ctx, 90, 419, Math.max(7, 180 * p), 7, 3.5, FEEL_COLORS[feel]);
+    drawTxt(ctx, game.selected.slot === 1 ? 'DRAG DOWN SLOWLY TO SLIDE IT OUT TOWARD YOU' : 'DRAG IT SIDEWAYS, SLOWLY  ·  ESC PUSHES IT BACK', 180, 441, 9, '#fdf2f7', 'center');
   } else {
     const thinking = game.status === 'playing' && game.phase === 'turn' && game.turn === 2;
     if (thinking) drawSprite(ctx, images.gabu_smug, 74, 418, 24, 24);
-    drawTxt(ctx, game.phase === 'over' ? (game.result === 'win' ? 'GABU TOPPLED IT! TAP FOR THE NEXT ROUND' : 'YOU TOPPLED IT') : yourTurn ? 'YOUR PULL: TAP A WAFER' : thinking ? 'GABU IS PULLING' : 'WOBBLY WAFERS',
+    drawTxt(ctx, game.phase === 'over' ? (game.result === 'win' ? 'GABU TOPPLED IT! TAP FOR THE NEXT ROUND' : 'YOU TOPPLED IT') : yourTurn ? 'YOUR PULL: GRAB A WAFER AND SLIDE IT OUT' : thinking ? (game.gabuPull ? 'GABU IS PULLING' : 'GABU IS PICKING') : 'WOBBLY WAFERS',
       180, 430, 11, game.result === 'win' && game.phase === 'over' ? '#ffe08a' : '#fdf2f7', 'center');
-    drawTxt(ctx, 'TAP  ·  ARROWS + SPACE  ·  ESC CANCELS', 180, 445, 8, '#bfa9c4', 'center');
+    drawTxt(ctx, 'NUDGE TO FEEL IT  ·  ARROWS, THEN HOLD SPACE', 180, 445, 8, '#bfa9c4', 'center');
   }
   if (game.status === 'dead') overlay(ctx, 'CRASH!', `Streak over: ${game.wins} ${game.wins === 1 ? 'win' : 'wins'}, ${game.score} points.`, 'PRESS PLAY FOR A NEW STREAK', '#ff8fb8');
   else if (game.status === 'paused') overlay(ctx, 'PAUSED', 'The wafers are holding their breath.', 'PRESS PLAY TO RESUME', '#b8a7ff');
-  else if (game.status === 'idle') overlay(ctx, 'WOBBLY WAFERS', 'Pull a wafer, stack it on top. Don’t topple it.', 'PRESS PLAY OR TAP TO START', '#f6d79a');
+  else if (game.status === 'idle') overlay(ctx, 'WOBBLY WAFERS', 'Slide a wafer out slowly. Loose ones are safest.', 'PRESS PLAY OR TAP TO START', '#f6d79a');
   ctx.restore();
 }
 function overlay(ctx, message, sub, hint, accent) {
@@ -6945,7 +7058,7 @@ function overlay(ctx, message, sub, hint, accent) {
   drawTxt(ctx, hint, 180, 265, 9, '#ffd98c', 'center');
 }
 
-return {waferLayout,waferAt,drawWafer,drawWobblyWafers};
+return {waferLayout,heldOffset,waferAt,drawWafer,drawWobblyWafers};
 })();
 const {CHARMS,MEMORY_SIZES,MEMORY_PREVIEW,GachaMatchGame}=(()=>{
 /** Gacha Match: open gacha capsules two at a time and find every pair of matching charms.
@@ -10199,7 +10312,7 @@ export function setup(ctx) {
   const images=lazyCanvasImages(requestDraw);let lifecycle={activeIds:[],ready:false};
   let widget=null,drawer=null,action=null,frame=0,lastTs=0,shown=false,disposed=false;
   let drawPending=true,refreshPending=false,blurred=false;
-  let keyHeld=false,pointerStart=null,selectedCell=-1,keyboardCursor=-1,solitaireCursor=-1,chessCursor=-1,bubbleAiming=false,toyKeys=false,malwareFrom=null,sugarCarving=false;
+  let keyHeld=false,pointerStart=null,selectedCell=-1,keyboardCursor=-1,solitaireCursor=-1,chessCursor=-1,bubbleAiming=false,toyKeys=false,malwareFrom=null,sugarCarving=false,waferDrag=null;
   const classicGames={},pendingClassicScores=new Set();let classicSavePending=false;
   let gambit=null,gambitDirty=false,gambitCursor=-1,gambitInspection=null,gambitAnnounce=null;
   const matchBanks=Object.create(null);
@@ -10473,7 +10586,7 @@ export function setup(ctx) {
   function refreshReaction(){
     if(!reactionBox)return;
     const item=reactions.current;
-    // While you hold a wafer, Gabu keeps his line to himself so it never covers the steady-hand meter.
+    // While you hold a wafer, Gabu keeps his line to himself so it never covers the pull bar.
     const pulling=activeMode==='wafer'&&!!classicGames.wafer?.selected;
     if(!settings.gabuReactions||!item||!shown||item.game!==activeMode||pulling){if(!reactionBox.hidden)reactionBox.hidden=true;return;}
     if(reactionBox.hidden)reactionBox.hidden=false;
@@ -10560,7 +10673,7 @@ export function setup(ctx) {
   function switchMode(mode,launch=false){
     if(!GAME_IDS.includes(mode))return;
     if(activeMode!==mode)active().pause();
-    activeMode=mode;selectedCell=-1;keyboardCursor=-1;solitaireCursor=-1;chessCursor=-1;bubbleAiming=false;toyKeys=false;gambitCursor=-1;gambitInspection=null;malwareFrom=null;sugarCarving=false;pointerStart=null;reactions.clear();
+    activeMode=mode;selectedCell=-1;keyboardCursor=-1;solitaireCursor=-1;chessCursor=-1;bubbleAiming=false;toyKeys=false;gambitCursor=-1;gambitInspection=null;malwareFrom=null;sugarCarving=false;waferDrag=null;pointerStart=null;reactions.clear();
     if(mode==='bird'||mode==='gabi'){
       // Do not reset an existing bird/Gabi run just because the player opens another tab.
       if(game.mode!==mode){settings.mode=mode;game.reset(mode,settings.difficulty,bests[mode]);}
@@ -10689,7 +10802,12 @@ export function setup(ctx) {
     else if(activeMode==='tictac'){const cell=tictacCellAt(x,y);if(current.phase==='over')current.nextRound();else if(cell>=0)current.place(cell);}
     else if(activeMode==='cake')current.release();
     else if(activeMode==='boop'){const hole=boopHoleAt(x,y,current);if(hole>=0)current.boop(hole);}
-    else if(activeMode==='wafer'){const hit=waferAt(x,y,current.layers.length,current.lean(settings.reduceMotion));current.choose(hit?hit.row:-1,hit?hit.slot:0);}
+    // Wobbly Wafers: press a wafer to hold it, then drag to slide it out. A press on empty space lets go of an untouched wafer.
+    else if(activeMode==='wafer'){
+      if(current.phase==='over')current.nextRound();
+      else{const hit=waferAt(x,y,current.layers.length,current.lean(settings.reduceMotion),current.selected);
+        if(hit&&current.grab(hit.row,hit.slot)){waferDrag={x,y};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}else if(!hit)current.release();}
+    }
     else if(activeMode==='memory'){const card=capsuleAt(x,y,current.cols,current.rows);if(card>=0)current.flip(card);}
     else if(activeMode==='bubble'){current.setAim(x,y);bubbleAiming=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     // Malware Mayhem steers while the finger moves; a press that never moves is a tap toward where it landed.
@@ -10775,10 +10893,11 @@ export function setup(ctx) {
       else if(e.code==='Enter'||e.code==='Space'){if(!e.repeat)current.boop();}
       else current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?-1:directions[e.code]==='down'?1:0);
     }else if(activeMode==='wafer'){
-      // Wafer rows count up from the table, so Up climbs the tower.
+      // Wafer rows count up from the table, so Up climbs the tower. Space picks a wafer, and holding it slides the wafer out
+      // at a steady pace. Moving to another wafer pushes a part-pulled one back in.
       if(e.code==='Escape')current.cancel();
-      else if(e.code==='Enter'||e.code==='Space'){if(!e.repeat)current.choose();}
-      else if(!current.selected)current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?1:directions[e.code]==='down'?-1:0);
+      else if(e.code==='Enter'||e.code==='Space'){if(!e.repeat||current.selected)current.choose();}
+      else{if(current.selected)current.cancel();current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?1:directions[e.code]==='down'?-1:0);}
     }else if(activeMode==='memory'){
       if(e.code==='Enter'||e.code==='Space'){if(!e.repeat)current.flip();}
       else current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?-1:directions[e.code]==='down'?1:0);
@@ -10841,6 +10960,14 @@ export function setup(ctx) {
     try{canvas?.setPointerCapture?.(e.pointerId);}catch{}refresh();
   }
   function pointerMove(e){
+    if(activeMode==='wafer'){
+      const held=classicGames.wafer.selected;if(!waferDrag||!held||!canvas)return;
+      const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
+      const x=(e.clientX-rect.left)*360/rect.width,y=(e.clientY-rect.top)*452/rect.height;
+      // Side wafers slide out sideways, away from the tower; a middle wafer slides out toward you, which is down the screen.
+      classicGames.wafer.slide(held.slot===0?waferDrag.x-x:held.slot===2?x-waferDrag.x:y-waferDrag.y);waferDrag={x,y};flushClassic();
+      return;
+    }
     if(activeMode==='sugar'){
       if(!sugarCarving||!canvas)return;
       const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
@@ -10861,6 +10988,11 @@ export function setup(ctx) {
     classicGames.bubble.setAim((e.clientX-rect.left)*360/rect.width,(e.clientY-rect.top)*452/rect.height);
   }
   function pointerUp(e){
+    if(activeMode==='wafer'&&waferDrag){
+      waferDrag=null;classicGames.wafer.release();
+      try{if(canvas?.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
+      flushClassic();save();refresh();pointerStart=null;return;
+    }
     if(activeMode==='sugar'&&sugarCarving){
       sugarCarving=false;classicGames.sugar.lift();
       try{if(canvas?.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
@@ -11217,7 +11349,7 @@ export function setup(ctx) {
     tip(boopInfo,'Bunnies pop out of the nine burrows; boop them before they duck back down. Golden bunnies are worth 50 and every five-boop streak adds a bonus. Gabu\u2019s little robots are decoys: booping one costs 20 points and your streak. Tap a burrow, press 1\u20139 (top-left to bottom-right), or move with the arrows and boop with Space. Rounds last 45 seconds. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('boop',makeSelect(boopInfo,'Bunny pace','Chill bunnies stay up longer and fewer pop up at once; Chaos bunnies are quick and crowded. Changes apply to your next round.',TOY_PACES.boop,toyPaces.boop,'Boop-a-Bun pace',v=>{toyPaces.boop=v;saveNow();refresh();}));
     const waferInfo=drawerGamePanel('wafer');
-    tip(waferInfo,'Take turns with Gabu pulling wafers from the tower and stacking them on top. Tap a wafer to pick it, then tap again while the steady-hand meter is green for a clean pull; sloppy pulls make the tower wobble. You can\u2019t pull from the top two layers, and a layer left with only an edge wafer tips everything above it. The outline turns yellow on risky wafers and red on ones that would topple the tower. Whoever topples the tower loses the round; Gabu toppling it extends your streak. Arrows move, Space picks and pulls, Escape cancels. Every 100 new personal-best points earns a ticket.');
+    tip(waferInfo,'Wafer-cookie Jenga against Gabu. Press a wafer to hold it and drag to slide it out: side wafers slide sideways, a middle wafer slides toward you (drag down). Out it comes, it goes on top, and it is Gabu\u2019s turn. Every wafer has its own grip: the weight resting on it and how snugly it sits. Loose ones slide out clean; stuck ones shake the tower however gently you pull, and rushing shakes it more. Nudge a wafer to feel it, push it back and try another. The tower settles when left alone, but each hole keeps it a little shakier. It falls if the weight above any layer hangs past what that layer still has, or if the wobble meter fills. Whoever topples it loses the round; Gabu toppling it extends your streak. Keys: arrows pick a wafer, hold Space to slide it out steadily, Escape pushes it back. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('wafer',makeSelect(waferInfo,'Gabu difficulty','How steady Gabu\u2019s paws are and how well Gabu picks wafers. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.wafer,'Wobbly Wafers difficulty',v=>{gabuLevels.wafer=v;saveNow();refresh();}));
     const memoryInfo=drawerGamePanel('memory');
     tip(memoryInfo,'Each new tray starts with every capsule open for a few seconds so you can memorize the charms (3 on Cozy, 3.5 on Classic, 4 on Busy); tap to start early. Then open two capsules at a time to find matching pairs. Matches in a row build a streak bonus, and finishing the tray adds a bonus that shrinks with every miss. Tap a capsule, or use the arrows and Space. Every 100 new personal-best points earns a ticket.');

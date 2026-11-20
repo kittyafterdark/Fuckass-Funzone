@@ -902,6 +902,12 @@ const SAYINGS=Object.freeze({
    "Down it goes! My hands stay steady and yours stay a crime!",
    "Wrong wafer! Every part of that was the wrong wafer!",
    "Streak over! The tower has chosen its villain, and it's you!"
+  ],
+  stuck:[
+   "That one's STUCK. Put it back. [Concern marker: not for you. For my tower.]",
+   "You feel that resistance? That's the tower begging you to stop.",
+   "Stability warning. That wafer is load-bearing, genius.",
+   "Wow, you picked the one wafer holding everything up. Bold."
   ]
  },
  memory:{
@@ -1138,6 +1144,7 @@ export class ReactionDirector {
   else if(event==='crash'){mood='annoyed';priority=3;}
   else if(event==='caught'){mood='hype';priority=4;}
   // Sugar Snap: Gabu pressed the shapes, so he gloats at a snap, frets at a crack, and is grudgingly hyped by a clean pop.
+  else if(game==='wafer'&&event==='stuck'){mood='panic';priority=3;}
   else if(game==='bubble'&&event==='bloom'){mood='shock';priority=3;}
   else if(game==='bubble'&&event==='rainbow'){mood='hype';priority=3;}
   else if(game==='lockscreen'&&event==='wrong'){mood='smug';priority=1;}

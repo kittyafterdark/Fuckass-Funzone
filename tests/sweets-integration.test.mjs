@@ -131,7 +131,11 @@ test('bundled Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, 
     const boop = h.save().puzzles.boop; assert.ok(boop.timeLeft < 45, 'the round clock runs'); assert.equal(boop.cursor, 0, 'the tap moved the cursor to the first burrow');
     h.key('KeyP'); const pausedBoop = h.save().puzzles.boop; h.frames(10); assert.equal(h.save().puzzles.boop.timeLeft, pausedBoop.timeLeft, 'pause stops the clock');
     h.key('KeyP');
-    h.pick('wafer'); h.tap(180, 290); h.frames(2); h.tap(5, 5); h.frames(1);
+    // A finger holds a middle wafer and drags it down, toward the player, a few pixels per frame until it slides out.
+    h.pick('wafer'); const waferCanvas = h.findClass('bb-canvas');
+    waferCanvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 290 });
+    for (let i = 1; i <= 20; i++) { waferCanvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 290 + i * 3 }); h.frames(1); }
+    waferCanvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 350 }); h.frames(1);
     const wafer = h.save().puzzles.wafer; assert.equal(wafer.layers.flat().filter(Boolean).length, 36, 'one wafer moved from the middle to the top');
     assert.ok(wafer.layers.length === 13 || wafer.status === 'dead', 'the pulled wafer started a new top layer');
     h.pick('memory'); h.key('Space'); h.key('Space'); h.key('ArrowRight'); h.key('Space');

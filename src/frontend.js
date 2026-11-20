@@ -429,7 +429,7 @@ export function setup(ctx) {
   const images=lazyCanvasImages(requestDraw);let lifecycle={activeIds:[],ready:false};
   let widget=null,drawer=null,action=null,frame=0,lastTs=0,shown=false,disposed=false;
   let drawPending=true,refreshPending=false,blurred=false;
-  let keyHeld=false,pointerStart=null,selectedCell=-1,keyboardCursor=-1,solitaireCursor=-1,chessCursor=-1,bubbleAiming=false,toyKeys=false,malwareFrom=null,sugarCarving=false;
+  let keyHeld=false,pointerStart=null,selectedCell=-1,keyboardCursor=-1,solitaireCursor=-1,chessCursor=-1,bubbleAiming=false,toyKeys=false,malwareFrom=null,sugarCarving=false,waferDrag=null;
   const classicGames={},pendingClassicScores=new Set();let classicSavePending=false;
   let gambit=null,gambitDirty=false,gambitCursor=-1,gambitInspection=null,gambitAnnounce=null;
   const matchBanks=Object.create(null);
@@ -703,7 +703,7 @@ export function setup(ctx) {
   function refreshReaction(){
     if(!reactionBox)return;
     const item=reactions.current;
-    // While you hold a wafer, Gabu keeps his line to himself so it never covers the steady-hand meter.
+    // While you hold a wafer, Gabu keeps his line to himself so it never covers the pull bar.
     const pulling=activeMode==='wafer'&&!!classicGames.wafer?.selected;
     if(!settings.gabuReactions||!item||!shown||item.game!==activeMode||pulling){if(!reactionBox.hidden)reactionBox.hidden=true;return;}
     if(reactionBox.hidden)reactionBox.hidden=false;
@@ -790,7 +790,7 @@ export function setup(ctx) {
   function switchMode(mode,launch=false){
     if(!GAME_IDS.includes(mode))return;
     if(activeMode!==mode)active().pause();
-    activeMode=mode;selectedCell=-1;keyboardCursor=-1;solitaireCursor=-1;chessCursor=-1;bubbleAiming=false;toyKeys=false;gambitCursor=-1;gambitInspection=null;malwareFrom=null;sugarCarving=false;pointerStart=null;reactions.clear();
+    activeMode=mode;selectedCell=-1;keyboardCursor=-1;solitaireCursor=-1;chessCursor=-1;bubbleAiming=false;toyKeys=false;gambitCursor=-1;gambitInspection=null;malwareFrom=null;sugarCarving=false;waferDrag=null;pointerStart=null;reactions.clear();
     if(mode==='bird'||mode==='gabi'){
       // Do not reset an existing bird/Gabi run just because the player opens another tab.
       if(game.mode!==mode){settings.mode=mode;game.reset(mode,settings.difficulty,bests[mode]);}
@@ -919,7 +919,12 @@ export function setup(ctx) {
     else if(activeMode==='tictac'){const cell=tictacCellAt(x,y);if(current.phase==='over')current.nextRound();else if(cell>=0)current.place(cell);}
     else if(activeMode==='cake')current.release();
     else if(activeMode==='boop'){const hole=boopHoleAt(x,y,current);if(hole>=0)current.boop(hole);}
-    else if(activeMode==='wafer'){const hit=waferAt(x,y,current.layers.length,current.lean(settings.reduceMotion));current.choose(hit?hit.row:-1,hit?hit.slot:0);}
+    // Wobbly Wafers: press a wafer to hold it, then drag to slide it out. A press on empty space lets go of an untouched wafer.
+    else if(activeMode==='wafer'){
+      if(current.phase==='over')current.nextRound();
+      else{const hit=waferAt(x,y,current.layers.length,current.lean(settings.reduceMotion),current.selected);
+        if(hit&&current.grab(hit.row,hit.slot)){waferDrag={x,y};try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}else if(!hit)current.release();}
+    }
     else if(activeMode==='memory'){const card=capsuleAt(x,y,current.cols,current.rows);if(card>=0)current.flip(card);}
     else if(activeMode==='bubble'){current.setAim(x,y);bubbleAiming=true;try{canvas?.setPointerCapture?.(e.pointerId);}catch{}}
     // Malware Mayhem steers while the finger moves; a press that never moves is a tap toward where it landed.
@@ -1005,10 +1010,11 @@ export function setup(ctx) {
       else if(e.code==='Enter'||e.code==='Space'){if(!e.repeat)current.boop();}
       else current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?-1:directions[e.code]==='down'?1:0);
     }else if(activeMode==='wafer'){
-      // Wafer rows count up from the table, so Up climbs the tower.
+      // Wafer rows count up from the table, so Up climbs the tower. Space picks a wafer, and holding it slides the wafer out
+      // at a steady pace. Moving to another wafer pushes a part-pulled one back in.
       if(e.code==='Escape')current.cancel();
-      else if(e.code==='Enter'||e.code==='Space'){if(!e.repeat)current.choose();}
-      else if(!current.selected)current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?1:directions[e.code]==='down'?-1:0);
+      else if(e.code==='Enter'||e.code==='Space'){if(!e.repeat||current.selected)current.choose();}
+      else{if(current.selected)current.cancel();current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?1:directions[e.code]==='down'?-1:0);}
     }else if(activeMode==='memory'){
       if(e.code==='Enter'||e.code==='Space'){if(!e.repeat)current.flip();}
       else current.moveCursor(directions[e.code]==='left'?-1:directions[e.code]==='right'?1:0,directions[e.code]==='up'?-1:directions[e.code]==='down'?1:0);
@@ -1071,6 +1077,14 @@ export function setup(ctx) {
     try{canvas?.setPointerCapture?.(e.pointerId);}catch{}refresh();
   }
   function pointerMove(e){
+    if(activeMode==='wafer'){
+      const held=classicGames.wafer.selected;if(!waferDrag||!held||!canvas)return;
+      const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
+      const x=(e.clientX-rect.left)*360/rect.width,y=(e.clientY-rect.top)*452/rect.height;
+      // Side wafers slide out sideways, away from the tower; a middle wafer slides out toward you, which is down the screen.
+      classicGames.wafer.slide(held.slot===0?waferDrag.x-x:held.slot===2?x-waferDrag.x:y-waferDrag.y);waferDrag={x,y};flushClassic();
+      return;
+    }
     if(activeMode==='sugar'){
       if(!sugarCarving||!canvas)return;
       const rect=canvas.getBoundingClientRect();if(!rect?.width||!rect?.height)return;
@@ -1091,6 +1105,11 @@ export function setup(ctx) {
     classicGames.bubble.setAim((e.clientX-rect.left)*360/rect.width,(e.clientY-rect.top)*452/rect.height);
   }
   function pointerUp(e){
+    if(activeMode==='wafer'&&waferDrag){
+      waferDrag=null;classicGames.wafer.release();
+      try{if(canvas?.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
+      flushClassic();save();refresh();pointerStart=null;return;
+    }
     if(activeMode==='sugar'&&sugarCarving){
       sugarCarving=false;classicGames.sugar.lift();
       try{if(canvas?.hasPointerCapture?.(e.pointerId))canvas.releasePointerCapture(e.pointerId);}catch{}
@@ -1447,7 +1466,7 @@ export function setup(ctx) {
     tip(boopInfo,'Bunnies pop out of the nine burrows; boop them before they duck back down. Golden bunnies are worth 50 and every five-boop streak adds a bonus. Gabu\u2019s little robots are decoys: booping one costs 20 points and your streak. Tap a burrow, press 1\u20139 (top-left to bottom-right), or move with the arrows and boop with Space. Rounds last 45 seconds. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('boop',makeSelect(boopInfo,'Bunny pace','Chill bunnies stay up longer and fewer pop up at once; Chaos bunnies are quick and crowded. Changes apply to your next round.',TOY_PACES.boop,toyPaces.boop,'Boop-a-Bun pace',v=>{toyPaces.boop=v;saveNow();refresh();}));
     const waferInfo=drawerGamePanel('wafer');
-    tip(waferInfo,'Take turns with Gabu pulling wafers from the tower and stacking them on top. Tap a wafer to pick it, then tap again while the steady-hand meter is green for a clean pull; sloppy pulls make the tower wobble. You can\u2019t pull from the top two layers, and a layer left with only an edge wafer tips everything above it. The outline turns yellow on risky wafers and red on ones that would topple the tower. Whoever topples the tower loses the round; Gabu toppling it extends your streak. Arrows move, Space picks and pulls, Escape cancels. Every 100 new personal-best points earns a ticket.');
+    tip(waferInfo,'Wafer-cookie Jenga against Gabu. Press a wafer to hold it and drag to slide it out: side wafers slide sideways, a middle wafer slides toward you (drag down). Out it comes, it goes on top, and it is Gabu\u2019s turn. Every wafer has its own grip: the weight resting on it and how snugly it sits. Loose ones slide out clean; stuck ones shake the tower however gently you pull, and rushing shakes it more. Nudge a wafer to feel it, push it back and try another. The tower settles when left alone, but each hole keeps it a little shakier. It falls if the weight above any layer hangs past what that layer still has, or if the wobble meter fills. Whoever topples it loses the round; Gabu toppling it extends your streak. Keys: arrows pick a wafer, hold Space to slide it out steadily, Escape pushes it back. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('wafer',makeSelect(waferInfo,'Gabu difficulty','How steady Gabu\u2019s paws are and how well Gabu picks wafers. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.wafer,'Wobbly Wafers difficulty',v=>{gabuLevels.wafer=v;saveNow();refresh();}));
     const memoryInfo=drawerGamePanel('memory');
     tip(memoryInfo,'Each new tray starts with every capsule open for a few seconds so you can memorize the charms (3 on Cozy, 3.5 on Classic, 4 on Busy); tap to start early. Then open two capsules at a time to find matching pairs. Matches in a row build a streak bonus, and finishing the tray adds a bonus that shrinks with every miss. Tap a capsule, or use the arrows and Space. Every 100 new personal-best points earns a ticket.');
