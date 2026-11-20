@@ -36,9 +36,9 @@ Open **Funzone OS** from the arcade drawer to launch any of the twenty-four game
 | **Berry Drop** | Connect four strawberries before Gabu's blueberries do. Tap a column or press 1–7. Keep the win streak alive. |
 | **Tic Tac Treats** | Pocky crosses against Gabu's donuts. Tap a square or press 1–9. Each side keeps only its three newest treats, so the board keeps shifting. Wins build your streak. |
 | **Cake Tower** | Drop each swinging tier with a tap or Space. A tier only stays if its middle lands over the tier below. Perfect drops steady the cake; sloppy ones make it wobble and harder to aim at. Three missed tiers end the run. |
-| **Bubble Bloom** | Drag to aim and release, or aim with the arrows and shoot with Space. Pop three of a kind and drop what hangs. |
+| **Bubble Bloom** | Drag to aim and release, or aim with the arrows and shoot with Space. Pop three of a kind and drop what hangs. Pops in a row build a combo, and a full Bloom meter loads a rainbow bubble that matches anything. |
 | **Boop-a-Bun** | Boop bunnies as they pop out of their burrows. Golden ones pay extra; skip Gabu's robot decoys. |
-| **Wobbly Wafers** | Take turns with Gabu pulling wafers from the tower. Tap a wafer, then tap again while the meter is green. Don't topple it. |
+| **Wobbly Wafers** | Wafer-cookie Jenga against Gabu. Hold a wafer and slide it out slowly (sideways, or down for a middle one), or hold Space. Loose wafers come out clean; stuck ones shake the tower. Don't topple it. |
 | **Gacha Match** | Memorize the open capsules, then open two at a time to find every pair of matching charms. Choose a cozy, classic, or busy tray. |
 | **Gabu's Gambit** | Build a deck across eight Antes, combine five of 75 original Jokers, open eight booster variants, and continue into Endless. |
 | **Malware Mayhem** | Play a little virus loose in Gabu's mainframe: eat every byte of his data while his antivirus bots hunt you. Swipe, tap, or use the arrows. An exploit chip corrupts the bots so you can crash them back to their reboot dock. |

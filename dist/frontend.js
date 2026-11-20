@@ -5283,7 +5283,7 @@ function drawBerryDrop(canvas, game, { best = 0, images = {}, reduced = false, t
     const bob = reduced ? 0 : Math.sin(time * 5) * 2;
     drawBerryToken(ctx, 1, BX + game.cursor * CELL + CELL / 2, 89 + bob, R - 1);
   } else if (game.status === 'playing' && game.phase === 'turn' && game.turn === 2 && !game.falling) {
-    drawSprite(ctx, images.gabu_smug, 160, 70, 40, 34);
+    drawSprite(ctx, images.gabu_smug, 162, 62, 36, 31);
   }
   // Seated berries sit slightly small so their leaves and calyx stay visible inside each hole.
   rounded(ctx, BX - 10, BY - 10, CELL * BERRY_COLS + 20, CELL * BERRY_ROWS + 22, 18, '#2f2647');
