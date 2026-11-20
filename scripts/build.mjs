@@ -44,7 +44,7 @@ const classicModules=[
   ['cake', 'CakeTowerGame, CAKE_PACES'],['cake-render', 'drawCakeTower'],
   ['bubble', 'BubbleGame, BUBBLE_PACES'],['bubble-render', 'drawBubbleBloom'],
   ['boop', 'BoopGame, BOOP_PACES'],['boop-render', 'drawBoopABun, boopHoleAt'],
-  ['wafer', 'WobblyWafersGame'],['wafer-render', 'drawWobblyWafers, waferAt'],
+  ['wafer', 'GlowStackGame, pullDirection'],['wafer-render', 'drawGlowStack, stackBlockAt'],
   ['memory', 'GachaMatchGame, MEMORY_SIZES'],['memory-render', 'drawGachaMatch, capsuleAt'],
   ['malware', 'MalwareMayhemGame, MALWARE_PACES'],['malware-render', 'drawMalwareMayhem, malwareSwipe, malwareStroke'],
   ['sugar', 'SugarSnapGame, SUGAR_PACES'],['sugar-render', 'drawSugarSnap'],

@@ -109,7 +109,7 @@ test('bundled Catmate Chess plays by keyboard and touch, lets Gabu reply, pauses
   });
 });
 
-test('bundled Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, Wobbly Wafers and Gacha Match accept their controls and save', () => {
+test('bundled Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, Glow Stack and Gacha Match accept their controls and save', () => {
   withHost({}, h => {
     h.pick('berry'); h.key('Digit4'); h.frames(10);
     assert.equal(h.save().puzzles.berry.board.filter(v => v === 1).length, 1, 'key 4 dropped a strawberry');
@@ -131,13 +131,13 @@ test('bundled Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, 
     const boop = h.save().puzzles.boop; assert.ok(boop.timeLeft < 45, 'the round clock runs'); assert.equal(boop.cursor, 0, 'the tap moved the cursor to the first burrow');
     h.key('KeyP'); const pausedBoop = h.save().puzzles.boop; h.frames(10); assert.equal(h.save().puzzles.boop.timeLeft, pausedBoop.timeLeft, 'pause stops the clock');
     h.key('KeyP');
-    // A finger holds a middle wafer and drags it down, toward the player, a few pixels per frame until it slides out.
-    h.pick('wafer'); const waferCanvas = h.findClass('bb-canvas');
-    waferCanvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 290 });
-    for (let i = 1; i <= 20; i++) { waferCanvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 290 + i * 3 }); h.frames(1); }
-    waferCanvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 350 }); h.frames(1);
-    const wafer = h.save().puzzles.wafer; assert.equal(wafer.layers.flat().filter(Boolean).length, 36, 'one wafer moved from the middle to the top');
-    assert.ok(wafer.layers.length === 13 || wafer.status === 'dead', 'the pulled wafer started a new top layer');
+    // A finger holds a Glow Stack block and drags it straight down; the part of the drag along the block slides it out.
+    h.pick('wafer'); const stackCanvas = h.findClass('bb-canvas');
+    stackCanvas.dispatch('pointerdown', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 260 });
+    for (let i = 1; i <= 24; i++) { stackCanvas.dispatch('pointermove', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 260 + i * 6 }); h.frames(1); }
+    stackCanvas.dispatch('pointerup', { pointerType: 'touch', pointerId: 6, clientX: 180, clientY: 404 }); h.frames(1);
+    const stack = h.save().puzzles.wafer; assert.equal(stack.layers.flat().filter(Boolean).length, 36, 'one block moved from the middle to the top');
+    assert.ok(stack.layers.length === 13 || stack.status === 'dead', 'the pulled block started a new top layer');
     h.pick('memory'); h.key('Space'); h.key('Space'); h.key('ArrowRight'); h.key('Space');
     assert.equal(h.save().puzzles.memory.moves, 1, 'the first Space ends the countdown, then two keyboard flips make one turn');
     for (const id of ['berry', 'tictac', 'cake', 'bubble', 'boop', 'wafer', 'memory']) h.pick(id);

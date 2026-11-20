@@ -858,7 +858,7 @@ const SAYINGS=Object.freeze({
  },
  wafer:{
   pull:[
-   "Wafer out. Tower still standing. For now.",
+   "Block out. Tower still standing. For now.",
    "Fine. That one didn't kill us.",
    "A pull. Not clean, not a crime. Next.",
    "Still up. [Monitoring every wobble. Not worried. Monitoring.]"
@@ -871,16 +871,16 @@ const SAYINGS=Object.freeze({
   ],
   perfect:[
    "Clean pull. Show-off.",
-   "Smooth as frosting. Not one crumb twitched.",
+   "Smooth as glass. Literally. Not one block twitched.",
    "Surgical. Are your hands made of gyroscopes?",
-   "Perfect pull. Okay, wafer whisperer. I see you.",
+   "Perfect pull. Okay, block whisperer. I see you.",
    "Nice wrist action. [I will not be elaborating.]"
   ],
   risky:[
    "Oh, it's leaning. It's LEANING. Why would you do that?!",
    "That pull made the whole tower gasp. Me too.",
    "[Stability warning: critical.] It's held up by vibes now.",
-   "Careful! One more shaky paw and it's crumbs everywhere!",
+   "Careful! One more shaky paw and it's glass everywhere!",
    "You made it wobble and now I have to touch it next?!"
   ],
   gabu_risky:[
@@ -891,23 +891,23 @@ const SAYINGS=Object.freeze({
   ],
   win:[
    "NO! It fell on MY pull?! The table is uneven! Recount!",
-   "Crumbs everywhere and they're all MY fault?!",
-   "I calculated that pull PERFECTLY! The wafers betrayed me!",
+   "Glass everywhere and it's all MY fault?!",
+   "I calculated that pull PERFECTLY! The blocks betrayed me!",
    "I toppled it?! Delete this from the timeline. Immediately.",
    "That tower was cursed and you KNEW it. Fine. Round to you."
   ],
   death:[
-   "CRASH! Wafers everywhere and it's ALL on you!",
-   "Toppled! You pulled the one wafer holding everything up! Genius!",
+   "CRASH! Blocks everywhere and it's ALL on you!",
+   "Toppled! You pulled the one block holding everything up! Genius!",
    "Down it goes! My hands stay steady and yours stay a crime!",
-   "Wrong wafer! Every part of that was the wrong wafer!",
+   "Wrong block! Every part of that was the wrong block!",
    "Streak over! The tower has chosen its villain, and it's you!"
   ],
   stuck:[
    "That one's STUCK. Put it back. [Concern marker: not for you. For my tower.]",
    "You feel that resistance? That's the tower begging you to stop.",
-   "Stability warning. That wafer is load-bearing, genius.",
-   "Wow, you picked the one wafer holding everything up. Bold."
+   "Stability warning. That block is load-bearing, genius.",
+   "Wow, you picked the one block holding everything up. Bold."
   ]
  },
  memory:{
