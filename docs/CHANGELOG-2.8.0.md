@@ -1,4 +1,4 @@
-# Fuckass Funzone 2.8.0 — Three new games, a real wafer Jenga, and a livelier 2.7.0 batch
+# Fuckass Funzone 2.8.0 — Three new games, two redesigns, and a livelier 2.7.0 batch
 
 ## What's new
 
@@ -57,7 +57,7 @@ Simulated players who reason from the pattern some of the time, share of words c
 
 ## Reworked: Tic Tac Treats only keeps your three newest treats
 
-Tic Tac Treats and Berry Drop played almost the same loop, and plain tic-tac-toe mostly ends in a draw. Now each side keeps only its three newest treats on the board: placing a fourth eats your oldest, which shows faded beforehand (no blinking) so you can plan around it. Gabu searches with the same rule, two, four and seven moves ahead on Chill, Normal and Hard. Hard is beatable now, so it earns a bonus like the other levels. A round of 30 treats with no line goes stale and counts as a draw. Forks can no longer happen, so the fork event, sound and lines are gone for this game only. Older saves keep their streak and score and start the current round on a fresh board.
+Tic Tac Treats and Berry Drop (now Star Drop) played almost the same loop, and plain tic-tac-toe mostly ends in a draw. Now each side keeps only its three newest treats on the board: placing a fourth eats your oldest, which shows faded beforehand (no blinking) so you can plan around it. Gabu searches with the same rule, two, four and seven moves ahead on Chill, Normal and Hard. Hard is beatable now, so it earns a bonus like the other levels. A round of 30 treats with no line goes stale and counts as a draw. Forks can no longer happen, so the fork event, sound and lines are gone for this game only. Older saves keep their streak and score and start the current round on a fresh board.
 
 Simulated opponents, 200 rounds each, with alternating starters (W/L/D from the player's side):
 
@@ -67,25 +67,29 @@ Simulated opponents, 200 rounds each, with alternating starters (W/L/D from the 
 | Medium | 147 / 53 / 0 | 92 / 105 / 3 | 19 / 172 / 9 |
 | Weak | 75 / 125 / 0 | 31 / 169 / 0 | 5 / 195 / 0 |
 
-## Reworked: Wobbly Wafers is a real digital Jenga
+## Redesigned: Wobbly Wafers becomes Glow Stack
 
-The steady-hand meter raced to red, the tower fell too fast, and fallen wafers could slide off screen tilted or rest on an invisible ledge. Wafers now work the way Jenga blocks do:
+The steady-hand meter raced to red, the tower fell too fast, and, drawn flat from the side, a pulled wafer left the wafers above it looking like they floated over nothing. Jenga works because each layer crosses the one below, which a flat side view cannot show. Glow Stack draws a tower of glowing jewel-tone glass blocks at a three-quarter angle, with each layer crossing the one below like a real block tower, on a neon pad. A pulled block leaves a real hole, and the blocks above visibly rest across their neighbours.
 
-- **Slide them out by hand.** Hold a wafer and drag: side wafers slide sideways, a middle wafer slides out toward you (drag down; it grows a little as it comes). Keyboard: arrows pick a wafer, hold Space to slide it out steadily, Escape pushes it back. Fully out, it goes on top and it is Gabu's turn.
-- **Every wafer has its own grip:** the weight resting on it, shared by what is left in its layer, times how snugly it sits. Loose ones slide out clean; stuck ones shake the tower however gently you pull, and rushing shakes it more. Nudge one to feel it (the outline and a FEELS readout say loose, snug or stuck), push it back, and try another. Gabu warns you when you pick a stuck one.
-- **Real balance:** the tower stands only while the weight above every layer sits over the wafers that layer still has, so a lone edge drops it and a lopsided top can tip a narrow layer. It falls toward the side the weight hangs over.
+- **Slide them out by hand.** Hold a block and drag it out toward you along its length (down and right, or down and left), or pick one with the arrows and hold Space; Escape pushes it back. Fully out, it goes on top and it is Gabu's turn. Taps find the front-most block you can see.
+- **Every block has its own grip:** the weight resting on it, shared by what is left in its layer, times how snugly it sits. Loose ones slide out clean; stuck ones shake the tower however gently you pull, and rushing shakes it more. Nudge one to feel it (the outline and a FEELS readout say loose, snug or stuck), push it back, and try another. Gabu warns you when you pick a stuck one.
+- **Real balance, in both directions:** the tower stands only while the weight above every layer sits over the blocks that layer still has, so a lone edge drops it and a lopsided top can tip a narrow layer, toward the side the weight hangs over.
 - **A calmer wobble:** the tower settles when left alone, down to a floor that rises with every hole, so it gets nervier as the game goes on instead of racing to red.
-- **Gabu slides his wafers out too,** visibly. His level sets how well he reads grip and how steady his paws are.
-- **A smoother fall:** the top section tips over as one piece around the stump's outer edge with gentler gravity, breaks apart without a jolt, bounces off the screen's sides, rolls off its rounded ends, and comes to rest flat on the saucer or table. Across 60 random topples in the tests, no wafer sinks into the floor, slides while tilted, or rests anywhere but flat and on screen.
+- **Gabu slides his blocks out too,** visibly. His level sets how well he reads grip and how steady his paws are.
+- **A smoother fall:** the top section tips over as one piece with gentler gravity, breaks apart without a jolt, bounces off the screen's sides and comes to rest flat on the floor. Across 60 random topples in the tests, no block sinks into the floor, slides while tilted, flips over in the air, or rests anywhere but flat and on screen.
 
 Simulated players over 120 rounds against each level, share of rounds won:
 
 | Player | Chill Gabu | Normal Gabu | Hard Gabu |
 | --- | ---: | ---: | ---: |
-| Careful (feels for loose wafers, slides slowly) | 66% | 33% | 25% |
-| Sloppy (grabs anything, yanks) | 21% | 0% | 0% |
+| Careful (feels for loose blocks, slides slowly) | 66% | 32% | 27% |
+| Sloppy (grabs anything, yanks) | 13% | 2% | 0% |
 
-Rounds run about 10 to 16 pulls each. Older saves get fresh grips.
+Rounds run about 10 to 16 pulls each. The game keeps Wobbly Wafers' id and save keys, so bests, tickets, the difficulty setting and older saves carry over.
+
+## Redesigned: Berry Drop becomes Star Drop
+
+Berry Drop was the plainest board in the arcade and one more food game. Star Drop keeps every rule and control, and moves it into a night-sky chart: your pieces are golden stars, Gabu's are little ringed planets with his amber and blue eyes, and four in a row lights up as a glowing constellation. It keeps Berry Drop's id and save keys, so bests and streaks carry over.
 
 ## Reworked: Bubble Bloom fills the cabinet and has more going on
 
@@ -102,7 +106,7 @@ A wobbly cake never loses tiers on its own; wobble only makes it harder to aim. 
 
 ## Fixed: Gabu's line in the newer games
 
-His line now uses Kitty's own box, at the same size and at the bottom, in every newer game. The layouts moved instead, so nothing you need to see sits under it on the standard cabinet: Catmate Chess's board sits a little higher, Gacha Match's tray ends above it, and Bubble Bloom's field was rebuilt around it (above). Only footer hints go under his line, as in the original games, and every layout looks the same with commentary turned off. While you hold a wafer, Gabu stays quiet so the steady-hand meter shows.
+His line now uses Kitty's own box, at the same size and at the bottom, in every newer game. The layouts moved instead, so nothing you need to see sits under it on the standard cabinet: Catmate Chess's board sits a little higher, Gacha Match's tray ends above it, and Bubble Bloom's field was rebuilt around it (above). Only footer hints go under his line, as in the original games, and every layout looks the same with commentary turned off. While you hold a Glow Stack block, Gabu stays quiet so the pull bar shows.
 
 ## Fixed: Bubble Bloom's launcher cloud looked tilted
 
@@ -110,8 +114,8 @@ The cloud's puffs are now mirrored on a flat base, so it sits level.
 
 ## Changed: darker cabinets and Gabu's real eyes
 
-- **Darker cabinets:** Catmate Chess, Tic Tac Treats, Cake Tower and Gacha Match move from pastel boards to the arcade's dark cabinet look, so they sit beside the original games without going kawaii. Cake Tower becomes a late-night bakery whose sky deepens as the cake climbs. Their app icons now use dark tiles too. Boop-a-Bun keeps its bright garden, like the arcade's other colorful games.
-- **Gabu's eyes:** everything that stands in for Gabu now has his amber right eye and blue left eye, as on the Snake head: his chess kittens, Berry Drop's blueberries, Tic Tac Treats' donuts, Boop-a-Bun's robot decoys and the antivirus bots. Catmate Chess's header and app icon show his king kitten.
+- **Darker cabinets:** Boop-a-Bun moves to a moonlit garden (same bunnies and robots, with a low moon and a few fireflies), and Catmate Chess, Tic Tac Treats, Cake Tower and Gacha Match move from pastel boards to the arcade's dark cabinet look, so they sit beside the original games without going kawaii. Cake Tower becomes a late-night bakery whose sky deepens as the cake climbs. Their app icons now use dark tiles too. 
+- **Gabu's eyes:** everything that stands in for Gabu now has his amber right eye and blue left eye, as on the Snake head: his chess kittens, Star Drop's planets, Tic Tac Treats' donuts, Boop-a-Bun's robot decoys and the antivirus bots. Catmate Chess's header and app icon show his king kitten.
 - **Gabu's lines** for all the newer games were rewritten in his voice: crude, sarcastic, with bracketed log sidebars and concern markers.
 
 **No changes** to the original games' rules, scoring, difficulty, ticket formulas, shop items, saves, art or Gabu's lines. Every event the original games can send was replayed through the old and new reaction code with identical results.
@@ -119,13 +123,14 @@ The cloud's puffs are now mirrored on a flat base, so it sits level.
 ## Files changed
 
 - `src/malware.js`, `src/malware-render.js`, `src/sugar.js`, `src/sugar-render.js`, `src/lockscreen.js`, `src/lockscreen-render.js`: the three new games' rules engines and canvas renderers. The engines have no DOM or Spindle dependencies.
-- `assets/funzone/malware-app.svg`, `assets/funzone/sugar-app.svg`, `assets/funzone/lockscreen-app.svg`: their launcher icons. `chess-app.svg`, `berry-app.svg`, `treats-app.svg`, `cake-app.svg`, `memory-app.svg`: dark tiles and Gabu's eyes.
+- `assets/funzone/malware-app.svg`, `assets/funzone/sugar-app.svg`, `assets/funzone/lockscreen-app.svg`: their launcher icons. `chess-app.svg`, `berry-app.svg` (now Star Drop), `wafer-app.svg` (now Glow Stack), `treats-app.svg`, `cake-app.svg`, `memory-app.svg`, `boop-app.svg`: dark tiles, the new designs and Gabu's eyes.
 - `src/tictac.js`, `src/tictac-render.js`: the three-treat rule, Gabu's search, stale draws, and the faded next-to-go treat.
-- `src/wafer.js`, `src/wafer-render.js`: sliding pulls, grip, balance, settling, Gabu's pulls, and how the tower topples and comes to rest.
+- `src/wafer.js`, `src/wafer-render.js`: Glow Stack's three-quarter view, sliding pulls, grip, balance, settling, Gabu's pulls, and how the tower topples and comes to rest.
+- `src/connect-render.js`: Star Drop's sky chart, stars, planets and constellation line.
 - `src/bubble.js`, `src/bubble-render.js`: the framed field, combos, the Bloom meter and rainbow bubble, effects, and the level cloud.
 - `src/malware.js`, `src/malware-render.js` also carry the cornering and stroke tracking that make quick swipes reliable.
 - `src/chess-render.js`, `src/cake-render.js`, `src/memory-render.js`, `src/connect-render.js`, `src/boop-render.js`: darker palettes, layouts clear of Gabu's line, and Gabu's eyes.
-- `src/frontend.js`: the three new games' roster entries, input, drawer tabs and settings, sounds, saves and NEW BEST; drag-to-slide wafers and their keys; Malware Mayhem's stroke tracking; new drawer tips for Tic Tac Treats, Bubble Bloom and Wobbly Wafers; the light wobble cue for Cake Tower; Gabu stays quiet while a wafer is held.
+- `src/frontend.js`: the three new games' roster entries, input, drawer tabs and settings, sounds, saves and NEW BEST; drag-to-slide blocks and their keys; the Glow Stack and Star Drop names, help and keywords; Malware Mayhem's stroke tracking; new drawer tips for Tic Tac Treats, Bubble Bloom, Glow Stack and Star Drop; the light wobble cue for Cake Tower; Gabu stays quiet while a wafer is held.
 - `src/reactions.js`: Gabu's lines and moods for the newer games, including the three new ones.
 - `src/rewards.js`: a ticket every 500 new personal-best points in each new game.
 - `scripts/build.mjs`: bundles the new modules and icons; release banner.
@@ -138,7 +143,7 @@ Original versions of every edited source, config, doc, test and icon are retaine
 ## Verification
 
 - `node scripts/build.mjs` builds successfully, and a fresh build matches the committed `dist/frontend.js`.
-- `node --test tests/*.test.mjs`: **293/293 passed**.
+- `node --test tests/*.test.mjs`: **294/294 passed**.
 - The new games were played in Chromium at 382 px and 292 px cabinet widths, with a real mouse and with real touch on an emulated phone, with no page errors. Swiping, dragging and carving on the board never scroll the page or drag the cabinet.
 - Random-input stress runs (700 taps, drags, keys, letters, pauses, blurs and restarts per game, with reloads) on every newer game and on Gabu's Gambit produced no page errors, and every save restored.
 - Played in live Lumiverse.

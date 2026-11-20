@@ -33,12 +33,12 @@ Open **Funzone OS** from the arcade drawer to launch any of the twenty-four game
 | **Solitaire** | Play draw-one Klondike: tap a source card or run, then its destination; tap the stock to draw or recycle. Use Undo to take back a move. |
 | **Froggy** | Hop with the arrows, WASD, or touch pad. Dodge cars, ride logs, and fill five different homes to advance. |
 | **Catmate Chess** | Full-rules chess against Gabu with plush cat pieces. Tap a kitten, then a glowing paw print, or use the arrows and Enter. Z undoes. |
-| **Berry Drop** | Connect four strawberries before Gabu's blueberries do. Tap a column or press 1–7. Keep the win streak alive. |
+| **Star Drop** | Connect four stars in a night-sky chart before Gabu's planets do; four in a row lights up a constellation. Tap a column or press 1–7. |
 | **Tic Tac Treats** | Pocky crosses against Gabu's donuts. Tap a square or press 1–9. Each side keeps only its three newest treats, so the board keeps shifting. Wins build your streak. |
 | **Cake Tower** | Drop each swinging tier with a tap or Space. A tier only stays if its middle lands over the tier below. Perfect drops steady the cake; sloppy ones make it wobble and harder to aim at. Three missed tiers end the run. |
 | **Bubble Bloom** | Drag to aim and release, or aim with the arrows and shoot with Space. Pop three of a kind and drop what hangs. Pops in a row build a combo, and a full Bloom meter loads a rainbow bubble that matches anything. |
 | **Boop-a-Bun** | Boop bunnies as they pop out of their burrows. Golden ones pay extra; skip Gabu's robot decoys. |
-| **Wobbly Wafers** | Wafer-cookie Jenga against Gabu. Hold a wafer and slide it out slowly (sideways, or down for a middle one), or hold Space. Loose wafers come out clean; stuck ones shake the tower. Don't topple it. |
+| **Glow Stack** | A tower of glowing glass blocks at a three-quarter angle, against Gabu. Hold a block and slide it out toward you slowly, or hold Space. Loose blocks come out clean; stuck ones shake the tower. Don't topple it. |
 | **Gacha Match** | Memorize the open capsules, then open two at a time to find every pair of matching charms. Choose a cozy, classic, or busy tray. |
 | **Gabu's Gambit** | Build a deck across eight Antes, combine five of 75 original Jokers, open eight booster variants, and continue into Endless. |
 | **Malware Mayhem** | Play a little virus loose in Gabu's mainframe: eat every byte of his data while his antivirus bots hunt you. Swipe, tap, or use the arrows. An exploit chip corrupts the bots so you can crash them back to their reboot dock. |
@@ -47,7 +47,7 @@ Open **Funzone OS** from the arcade drawer to launch any of the twenty-four game
 
 Tetris, Solitaire, Froggy, Gambit, Malware Mayhem, Sugar Snap, and the eight games added in upstream 2.7.0 pause with **P** or the cabinet's main button; Gabu's Lockscreen uses **Escape**, since P is a letter there. They also pause when the window loses focus; saved games resume paused. Solitaire supports keyboard play: arrows choose cards/piles, Enter selects, D draws, F moves the selected top card to its foundation, Z/U undoes, and Escape cancels selection. Undo history lasts for the current session; the board itself survives reloads.
 
-Catmate Chess, Berry Drop, Tic Tac Treats, and Wobbly Wafers are played against Gabu, with a Chill, Normal, or Hard opponent in each game's drawer settings. Cake Tower, Bubble Bloom, Boop-a-Bun, and Malware Mayhem have Chill, Normal, and Chaos paces; Sugar Snap and Gabu's Lockscreen have Chill, Normal, and Hard difficulties; and Gacha Match has three tray sizes. A new difficulty, pace, or board size applies to your next new game, never to the one in progress. Chess undo also lasts for the current session only.
+Catmate Chess, Star Drop, Tic Tac Treats, and Glow Stack are played against Gabu, with a Chill, Normal, or Hard opponent in each game's drawer settings. Cake Tower, Bubble Bloom, Boop-a-Bun, and Malware Mayhem have Chill, Normal, and Chaos paces; Sugar Snap and Gabu's Lockscreen have Chill, Normal, and Hard difficulties; and Gacha Match has three tray sizes. A new difficulty, pace, or board size applies to your next new game, never to the one in progress. Chess undo also lasts for the current session only.
 
 ### Gabu's Gambit prototype
 
