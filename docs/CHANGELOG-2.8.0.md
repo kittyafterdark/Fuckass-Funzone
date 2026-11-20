@@ -141,7 +141,7 @@ Original versions of every edited source, config, doc, test and icon are retaine
 - `node --test tests/*.test.mjs`: **293/293 passed**.
 - The new games were played in Chromium at 382 px and 292 px cabinet widths, with a real mouse and with real touch on an emulated phone, with no page errors. Swiping, dragging and carving on the board never scroll the page or drag the cabinet.
 - Random-input stress runs (700 taps, drags, keys, letters, pauses, blurs and restarts per game, with reloads) on every newer game and on Gabu's Gambit produced no page errors, and every save restored.
-- Live Lumiverse on desktop and real devices still needs a check.
+- Played in live Lumiverse.
 
 ## Compatibility
 
