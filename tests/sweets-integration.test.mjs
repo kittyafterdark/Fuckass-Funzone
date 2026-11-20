@@ -109,7 +109,7 @@ test('bundled Catmate Chess plays by keyboard and touch, lets Gabu reply, pauses
   });
 });
 
-test('bundled Berry Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, Glow Stack and Gacha Match accept their controls and save', () => {
+test('bundled Star Drop, Tic Tac Treats, Cake Tower, Bubble Bloom, Boop-a-Bun, Glow Stack and Gacha Match accept their controls and save', () => {
   withHost({}, h => {
     h.pick('berry'); h.key('Digit4'); h.frames(10);
     assert.equal(h.save().puzzles.berry.board.filter(v => v === 1).length, 1, 'key 4 dropped a strawberry');

@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BerryDropGame, BERRY_COLS, BERRY_ROWS, lineThrough, winningColumns, chooseBerryColumn, dropRow, BERRY_LEVELS } from '../src/connect.js';
-import { berryColumnAt, drawBerryDrop } from '../src/connect-render.js';
+import { starColumnAt, drawStarDrop } from '../src/connect-render.js';
 
 const empty = () => Array(BERRY_COLS * BERRY_ROWS).fill(0);
 const at = (row, col) => row * BERRY_COLS + col;
 const settle = g => { for (let i = 0; i < 200 && (g.falling || g.turn === 2 && g.phase === 'turn' && g.status === 'playing'); i++) g.update(.1); };
 
-test('Berry Drop finds rows, columns and both diagonals through the newest berry', () => {
+test('Star Drop finds rows, columns and both diagonals through the newest star', () => {
   for (const cells of [[at(5, 0), at(5, 1), at(5, 2), at(5, 3)], [at(5, 6), at(4, 6), at(3, 6), at(2, 6)], [at(5, 0), at(4, 1), at(3, 2), at(2, 3)], [at(5, 6), at(4, 5), at(3, 4), at(2, 3)]]) {
     const b = empty(); for (const c of cells) b[c] = 1;
     assert.deepEqual(lineThrough(b, cells[3]), [...cells].sort((x, y) => x - y));
@@ -26,7 +26,7 @@ test('Gabu takes a win first and blocks yours at every level', () => {
   }
 });
 
-test('Berry Drop rounds build a streak, alternate starters, and one loss ends the run', () => {
+test('Star Drop rounds build a streak, alternate starters, and one loss ends the run', () => {
   const events = [], g = new BerryDropGame({ random: () => .99, level: 'chill', onEvent: e => events.push(e) }); g.start();
   g.board = empty(); for (const c of [0, 1, 2]) g.board[at(5, c)] = 1; g.board[at(4, 0)] = 2; g.board[at(4, 1)] = 2; g.board[at(4, 6)] = 2;
   assert.equal(g.drop(3), true); assert.equal(g.drop(4), false, 'one berry in the air at a time'); settle(g);
@@ -39,14 +39,14 @@ test('Berry Drop rounds build a streak, alternate starters, and one loss ends th
   g.start(); assert.equal(g.score, 0, 'a new streak starts fresh'); assert.equal(g.round, 1);
 });
 
-test('Berry Drop judges blocks on the board the drop saw, and pausing freezes a falling berry', () => {
+test('Star Drop judges blocks on the board the drop saw, and pausing freezes a falling star', () => {
   const events = [], g = new BerryDropGame({ random: () => .5, onEvent: e => events.push(e) }); g.start();
   g.board = empty(); g.board[at(5, 0)] = 2; g.board[at(5, 1)] = 2; g.board[at(5, 2)] = 2; g.board[at(5, 6)] = 1;
   g.drop(3); g.update(.05); g.pause(); const y = g.falling.y; g.update(1); assert.equal(g.falling.y, y);
   g.start(); settle(g); assert.ok(events.includes('block'));
 });
 
-test('Berry Drop saves restore paused and reject floating or contradictory boards', () => {
+test('Star Drop saves restore paused and reject floating or contradictory boards', () => {
   const g = new BerryDropGame({ random: () => .4 }); g.start(); g.drop(3); g.update(.05);
   const saved = g.snapshot(); assert.deepEqual(saved.falling, { col: 3, who: 1 });
   const back = new BerryDropGame({ saved }); assert.equal(back.status, 'paused'); assert.equal(back.falling.col, 3);
@@ -60,12 +60,12 @@ test('Berry Drop saves restore paused and reject floating or contradictory board
   assert.equal(bad({ level: 'nope' }), false);
 });
 
-test('Berry Drop renderer maps taps to columns and draws every state', () => {
-  assert.equal(berryColumnAt(27, 200), 0); assert.equal(berryColumnAt(333, 200), 6); assert.equal(berryColumnAt(10, 200), -1); assert.equal(berryColumnAt(100, 30), -1);
+test('Star Drop renderer maps taps to columns and draws every state', () => {
+  assert.equal(starColumnAt(27, 200), 0); assert.equal(starColumnAt(333, 200), 6); assert.equal(starColumnAt(10, 200), -1); assert.equal(starColumnAt(100, 30), -1);
   const ctx = new Proxy({ createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }) }, {
     get(target, name) { return name in target ? target[name] : () => {}; }, set(target, name, value) { target[name] = value; return true; },
   });
   const canvas = { width: 720, height: 904, getContext: () => ctx };
-  const g = new BerryDropGame({ random: () => .5 }); drawBerryDrop(canvas, g, {}); g.start(); g.drop(3); drawBerryDrop(canvas, g, {}); g.pause(); drawBerryDrop(canvas, g, {});
+  const g = new BerryDropGame({ random: () => .5 }); drawStarDrop(canvas, g, {}); g.start(); g.drop(3); drawStarDrop(canvas, g, {}); g.pause(); drawStarDrop(canvas, g, {});
   assert.ok(winningColumns(empty(), 1).length === 0);
 });

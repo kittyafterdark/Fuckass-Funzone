@@ -39,7 +39,7 @@ const classicModules=[
   ['solitaire', 'SolitaireGame'],['solitaire-render', 'drawSolitaire, solitaireHitAt'],
   ['froggy', 'FroggyGame'],['froggy-render', 'drawFroggy, froggyControlAt'],
   ['chess', 'ChessGame, CHESS_LEVELS'],['chess-render', 'drawChess, chessSquareAt'],
-  ['connect', 'BerryDropGame, BERRY_COLS'],['connect-render', 'drawBerryDrop, berryColumnAt'],
+  ['connect', 'BerryDropGame, BERRY_COLS'],['connect-render', 'drawStarDrop, starColumnAt'],
   ['tictac', 'TicTacTreatsGame'],['tictac-render', 'drawTicTacTreats, tictacCellAt'],
   ['cake', 'CakeTowerGame, CAKE_PACES'],['cake-render', 'drawCakeTower'],
   ['bubble', 'BubbleGame, BUBBLE_PACES'],['bubble-render', 'drawBubbleBloom'],

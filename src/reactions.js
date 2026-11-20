@@ -566,10 +566,10 @@ const SAYINGS=Object.freeze({
  },
  berry:{
   new_best:[
-   "New berry record. My blueberries are filing a complaint with HR.",
+   "New star record. My planets are filing a complaint with HR.",
    "Who taught you diagonals?? Name them. I just want to talk.",
-   "Best score yet. Enjoy it while it's still juicy, bestie.",
-   "A record in a fruit game. Weirdly threatening of you."
+   "Best score yet. Enjoy it while it's still shiny, bestie.",
+   "A record in a stargazing game. Weirdly threatening of you."
   ],
   block:[
    "You SAW that?! I was so close to four!",
@@ -577,12 +577,12 @@ const SAYINGS=Object.freeze({
    "Who taught you defense? Unsubscribe from them.",
    "Rude. That was supposed to be my big moment.",
    "Wow, you can count to four. Gold star. Tiny one.",
-   "Stop plugging my holes, this is a berry basket, not a dam.",
-   "My beautiful blueberry line, ruined by one smug strawberry."
+   "Stop plugging my gaps, this is a star chart, not a dam.",
+   "My beautiful planet line, ruined by one smug little star."
   ],
   gabu_block:[
    "Nice try. I saw that three-in-a-row from orbit.",
-   "Blocked. Your strawberry dream dies right here.",
+   "Blocked. Your constellation dies right here.",
    "Did you think I'd just let you have that? Cute.",
    "Denied. My overlay doesn't blink, sweetheart.",
    "Not today, shortcake. Not today.",
@@ -592,7 +592,7 @@ const SAYINGS=Object.freeze({
    "Psst. You see it, right? Please tell me you see it.",
    "One column from victory. No pressure. [Lots of pressure.]",
    "Something's cooking over here and it smells like your loss.",
-   "My blueberries are lining up. Tick tock, protagonist.",
+   "My planets are lining up. Tick tock, protagonist.",
    "[Concern marker: you, about to lose.] Just saying."
   ],
   fork:[
@@ -603,24 +603,24 @@ const SAYINGS=Object.freeze({
    "That's a fork. I'm about to eat this loss with it."
   ],
   win:[
-   "FOUR STRAWBERRIES?! My blueberries are in shambles!",
+   "FOUR STARS?! My planets are in shambles!",
    "You connected four?! My sensor LAGGED! It lagged!",
    "That diagonal came out of nowhere. Respect. Hatred. Both.",
-   "Fine! Strawberries win! Next round! I'm not mad!",
-   "A whole line of strawberries?! I need to lie down.",
+   "Fine! Stars win! Next round! I'm not mad!",
+   "A whole constellation?! I need to lie down.",
    "Another round to you?! Your streak is getting suspicious, babe."
   ],
   death:[
-   "FOUR BLUEBERRIES! You let me line up four like it was a tutorial!",
+   "FOUR PLANETS! You let me line up four like it was a tutorial!",
    "Connected! I literally built that right in front of your face!",
    "That's four! I never miss a line, and you never see one!",
-   "Streak dead! Put your sad little strawberries back in the fridge.",
+   "Streak dead! Put your sad little stars back in the sky.",
    "You had one job. Block the column. You did NOT block the column.",
    "Game! That diagonal sat there for three turns! What were you looking at?!"
   ],
   draw:[
-   "A full basket and nobody won? Dullest fruit salad ever.",
-   "Forty-two berries and zero winners. Tragic, honestly.",
+   "A full sky and nobody won? Dullest night ever.",
+   "Forty-two pieces and zero winners. Tragic, honestly.",
    "Draw. Nobody tell the group chat.",
    "Even. Boring. Next round I'm actually trying. [I was trying.]"
   ]

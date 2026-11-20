@@ -22,7 +22,8 @@ import { drawFroggy, froggyControlAt } from './froggy-render.js';
 import { ChessGame, CHESS_LEVELS } from './chess.js';
 import { drawChess, chessSquareAt } from './chess-render.js';
 import { BerryDropGame, BERRY_COLS } from './connect.js';
-import { drawBerryDrop, berryColumnAt } from './connect-render.js';
+// Star Drop keeps the id and files of Berry Drop, which it replaced, so bests, streaks and saves carry over.
+import { drawStarDrop, starColumnAt } from './connect-render.js';
 import { TicTacTreatsGame } from './tictac.js';
 import { drawTicTacTreats, tictacCellAt } from './tictac-render.js';
 import { CakeTowerGame, CAKE_PACES } from './cake.js';
@@ -56,7 +57,7 @@ const GAME_ROSTER = Object.freeze([
  ['match3','Trinket Panic','match_vec_cat'],['plinko','Plinko','plinko_app'],
  ['simon','Simon Says','simon_app'],['duck','Duck Hunt','duck_app'],['slots','Gabu Slots','slots_app'],
  ['tetris','Tetris','tetris_app'],['solitaire','Solitaire','solitaire_app'],['froggy','Froggy','froggy_app'],
- ['chess','Catmate Chess','chess_app'],['berry','Berry Drop','berry_app'],['tictac','Tic Tac Treats','treats_app'],
+ ['chess','Catmate Chess','chess_app'],['berry','Star Drop','berry_app'],['tictac','Tic Tac Treats','treats_app'],
  ['cake','Cake Tower','cake_app'],['bubble','Bubble Bloom','bubble_app'],['boop','Boop-a-Bun','boop_app'],
  ['wafer','Glow Stack','wafer_app'],['memory','Gacha Match','memory_app'],
  ['gambit',"Gabu's Gambit",'gambit_app'],['malware','Malware Mayhem','malware_app'],['sugar','Sugar Snap','sugar_app'],['lockscreen',"Gabu's Lockscreen",'lockscreen_app']
@@ -741,7 +742,7 @@ export function setup(ctx) {
       if(activeMode==='tetris')drawTetris(canvas,current,opts);
       else if(activeMode==='solitaire')drawSolitaire(canvas,current,opts);
       else if(activeMode==='chess')drawChess(canvas,current,{...toyOpts,cursor:chessCursor});
-      else if(activeMode==='berry')drawBerryDrop(canvas,current,toyOpts);
+      else if(activeMode==='berry')drawStarDrop(canvas,current,toyOpts);
       else if(activeMode==='tictac')drawTicTacTreats(canvas,current,toyOpts);
       else if(activeMode==='cake')drawCakeTower(canvas,current,toyOpts);
       else if(activeMode==='bubble')drawBubbleBloom(canvas,current,toyOpts);
@@ -916,7 +917,7 @@ export function setup(ctx) {
     const x=(e.clientX-rect.left)*360/rect.width,y=(e.clientY-rect.top)*452/rect.height;
     toyKeys=false;
     if(activeMode==='chess'){chessCursor=-1;current.select(chessSquareAt(x,y));}
-    else if(activeMode==='berry'){const col=berryColumnAt(x,y);if(current.phase==='over')current.nextRound();else if(col>=0)current.drop(col);}
+    else if(activeMode==='berry'){const col=starColumnAt(x,y);if(current.phase==='over')current.nextRound();else if(col>=0)current.drop(col);}
     else if(activeMode==='tictac'){const cell=tictacCellAt(x,y);if(current.phase==='over')current.nextRound();else if(cell>=0)current.place(cell);}
     else if(activeMode==='cake')current.release();
     else if(activeMode==='boop'){const hole=boopHoleAt(x,y,current);if(hole>=0)current.boop(hole);}
@@ -1268,7 +1269,7 @@ export function setup(ctx) {
     // The host drags the widget from any touch that moves, so claim touches here and let the phone scroll. The header still drags.
     bind(phoneEl,'pointerdown',e=>{if(e.pointerType==='touch')e.preventDefault();});
     canvas=create('canvas','bb-canvas');canvas.width=720;canvas.height=904;canvas.tabIndex=0;
-    canvas.setAttribute('role','button');canvas.setAttribute('aria-label','Funzone playfield. Gambit: 1 through 9 and 0 select up to ten cards, Space plays, D discards, P pauses. Use Run Info for the Joker Collection. R sorts ranks, S sorts suits, I opens Run Info. Arrows focus any action and Enter activates it. Escape closes details. Tetris: arrows, Space to drop, C to hold. Solitaire: tap source then destination, arrows and Enter to select, D to draw, Z to undo. Froggy: arrows or WASD to hop. P pauses these games. Chess: tap a piece then a square, or arrows and Enter. Berry Drop: tap a column or keys 1 to 7. Tic Tac Treats: tap a square or keys 1 to 9. Cake Tower: tap or Space to drop. Bubble Bloom: drag to aim and release, or arrows and Space. Boop-a-Bun: tap a burrow or keys 1 to 9. Glow Stack: hold a block and drag it out toward you, or arrows and hold Space. Gacha Match: tap two capsules. Malware Mayhem: swipe, tap, or arrows to steer. Sugar Snap: drag along the line, or hold Space to carve. Gabu\u2019s Lockscreen: type or tap letters; arrows and Enter pick a key; Escape pauses. Simon: tap colors or 1 through 4. Duck Hunt: tap ducks. Slots: tap or Space to spin fictional tickets. Plinko: tap or Space to drop. Match-3: tap or drag. Snake/2048: arrows or swipe. Bird/Jetpack: tap or hold.');
+    canvas.setAttribute('role','button');canvas.setAttribute('aria-label','Funzone playfield. Gambit: 1 through 9 and 0 select up to ten cards, Space plays, D discards, P pauses. Use Run Info for the Joker Collection. R sorts ranks, S sorts suits, I opens Run Info. Arrows focus any action and Enter activates it. Escape closes details. Tetris: arrows, Space to drop, C to hold. Solitaire: tap source then destination, arrows and Enter to select, D to draw, Z to undo. Froggy: arrows or WASD to hop. P pauses these games. Chess: tap a piece then a square, or arrows and Enter. Star Drop: tap a column or keys 1 to 7. Tic Tac Treats: tap a square or keys 1 to 9. Cake Tower: tap or Space to drop. Bubble Bloom: drag to aim and release, or arrows and Space. Boop-a-Bun: tap a burrow or keys 1 to 9. Glow Stack: hold a block and drag it out toward you, or arrows and hold Space. Gacha Match: tap two capsules. Malware Mayhem: swipe, tap, or arrows to steer. Sugar Snap: drag along the line, or hold Space to carve. Gabu\u2019s Lockscreen: type or tap letters; arrows and Enter pick a key; Escape pauses. Simon: tap colors or 1 through 4. Duck Hunt: tap ducks. Slots: tap or Space to spin fictional tickets. Plinko: tap or Space to drop. Match-3: tap or drag. Snake/2048: arrows or swipe. Bird/Jetpack: tap or hold.');
     gameStage=create('div','bb-game-stage');gameStage.append(canvas);
     gambitAnnounce=create('p','bb-sr-only');gambitAnnounce.setAttribute('role','status');gambitAnnounce.setAttribute('aria-live','polite');gameStage.append(gambitAnnounce);
     const plinkoHost=create('div','bb-plinko-host');
@@ -1309,7 +1310,7 @@ export function setup(ctx) {
     bind(document,'visibilitychange',()=>{if(document.hidden)pauseForExit();else requestDraw();});
     bind(canvas,'contextmenu',e=>e.preventDefault());
     drawer=ctx.ui.registerDrawerTab({id:'fuckass_funzone',title:'Fuckass Funzone',shortName:'Funzone',iconSvg:FUNZONE_TAB_SVG,description:'The arcade inside your model wait time',
-      keywords:['arcade','bird','gabi','gabu','jetpack','snake','2048','match3','match-3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','catmate','connect four','berry','tic tac toe','treats','cake','tower','bubble','bubble shooter','boop','bunny','whack a mole','wafer','jenga','glow stack','blocks','memory','match','gacha','capsules','gambit','poker','jokers','malware','virus','maze','chase','sugar','honeycomb','toffee','candy','carve','lockscreen','unlock','hangman','password','word','letters','phone','funzone','waiting','thinking']});
+      keywords:['arcade','bird','gabi','gabu','jetpack','snake','2048','match3','match-3','plinko','simon','duck','slots','tetris','solitaire','froggy','chess','catmate','connect four','berry','star drop','stars','constellation','tic tac toe','treats','cake','tower','bubble','bubble shooter','boop','bunny','whack a mole','wafer','jenga','glow stack','blocks','memory','match','gacha','capsules','gambit','poker','jokers','malware','virus','maze','chase','sugar','honeycomb','toffee','candy','carve','lockscreen','unlock','hangman','password','word','letters','phone','funzone','waiting','thinking']});
     writeStyle(drawer.root);
     const panel=create('section','bb bb-drawer');
     const banner=image('funzone_logo','bb-drawer-logo');banner.alt='Fuckass Funzone Arcade';panel.append(banner);
@@ -1452,8 +1453,8 @@ export function setup(ctx) {
     tip(chessInfo,'Full-rules chess against Gabu, with castling, en passant and promotion (pawns promote to a queen). Tap a cream kitten, then a glowing paw print. The hat is the piece: crown king, tiara queen, turret rook, pointy-hat bishop, helmet knight, bare-headed pawn. Keyboard: arrows pick a square, Enter or Space selects, Escape cancels. Z/U or Undo takes back your move and Gabu\u2019s reply. Score is 10 per point of material you capture plus a checkmate bonus; every 100 new personal-best points earns a ticket.');
     presetSelects.set('chess',makeSelect(chessInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new game.',GABU_LEVELS,gabuLevels.chess,'Catmate Chess difficulty',v=>{gabuLevels.chess=v;saveNow();refresh();}));
     const berryInfo=drawerGamePanel('berry');
-    tip(berryInfo,'Drop strawberries into the basket and connect four in a row, column or diagonal before Gabu\u2019s blueberries do. Tap a column, use Left/Right then Space or Down, or press 1\u20137. Each won round adds to your streak score and a draw adds a little; one loss ends the streak. Who starts alternates every round. Every 100 new personal-best points earns a ticket.');
-    presetSelects.set('berry',makeSelect(berryInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.berry,'Berry Drop difficulty',v=>{gabuLevels.berry=v;saveNow();refresh();}));
+    tip(berryInfo,'Drop stars into the night-sky chart and connect four in a row, column or diagonal before Gabu\u2019s planets do. Four in a row lights up as a constellation. Tap a column, use Left/Right then Space or Down, or press 1\u20137. Each won round adds to your streak score and a draw adds a little; one loss ends the streak. Who starts alternates every round. Every 100 new personal-best points earns a ticket.');
+    presetSelects.set('berry',makeSelect(berryInfo,'Gabu difficulty','How far ahead Gabu looks. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.berry,'Star Drop difficulty',v=>{gabuLevels.berry=v;saveNow();refresh();}));
     const treatsInfo=drawerGamePanel('tictac');
     tip(treatsInfo,'Tic-tac-toe with pocky crosses against Gabu\u2019s donuts. Tap a square, use the arrows and Space, or press 1\u20139 (top-left to bottom-right). Each side keeps only its three newest treats: placing a fourth eats your oldest, which shows faded before it goes, so plan around it. Wins build your streak score, a round of 30 treats with no line goes stale for a small bonus, and one loss ends the streak. Hard Gabu looks seven moves ahead. Every 100 new personal-best points earns a ticket.');
     presetSelects.set('tictac',makeSelect(treatsInfo,'Gabu difficulty','How far ahead Gabu looks and how often he slips up. Changes apply to your next new streak.',GABU_LEVELS,gabuLevels.tictac,'Tic Tac Treats difficulty',v=>{gabuLevels.tictac=v;saveNow();refresh();}));
